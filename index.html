@@ -2,6 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>OpenArmX 로봇 시뮬레이터</title>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
@@ -190,35 +191,49 @@ body {
   pointer-events:none; z-index:10000;
 }
 #guide-card {
-  position:absolute; width:270px;
+  position:absolute; width:300px;
   background:#0e0e20; border:1px solid #2a3a6a;
-  border-radius:12px; padding:22px 20px 16px;
+  border-radius:14px; padding:26px 22px 18px;
   box-shadow:0 12px 40px rgba(0,0,0,.7);
   transition:all .35s cubic-bezier(.4,0,.2,1);
   z-index:10001;
 }
-#guide-icon { font-size:28px; margin-bottom:10px; }
-#guide-title { font-size:14px; font-weight:700; color:#cde; margin-bottom:8px; }
-#guide-desc { font-size:12px; color:#778; line-height:1.7; margin-bottom:16px; white-space:pre-line; }
-#guide-dots { display:flex; gap:5px; margin-bottom:14px; }
+#guide-icon { font-size:32px; margin-bottom:12px; }
+#guide-title { font-size:15px; font-weight:700; color:#cde; margin-bottom:9px; }
+#guide-desc { font-size:13px; color:#889; line-height:1.75; margin-bottom:18px; white-space:pre-line; }
+#guide-dots { display:flex; gap:6px; margin-bottom:16px; }
 .guide-dot {
-  width:6px; height:6px; border-radius:50%;
+  width:7px; height:7px; border-radius:50%;
   background:#223; border:1px solid #334; transition:all .2s;
 }
-.guide-dot.on { background:#4a90e2; border-color:#4a90e2; width:18px; border-radius:3px; }
+.guide-dot.on { background:#4a90e2; border-color:#4a90e2; width:20px; border-radius:4px; }
 #guide-actions { display:flex; justify-content:space-between; align-items:center; }
 #guide-skip {
-  background:none; border:none; color:#445; font-size:11px;
-  cursor:pointer; padding:4px 0; transition:color .15s;
+  background:none; border:none; color:#556; font-size:12px;
+  cursor:pointer; padding:6px 0; transition:color .15s;
 }
-#guide-skip:hover { color:#778; }
+#guide-skip:hover { color:#889; }
 #guide-next {
   background:var(--c-primary); border:1px solid var(--c-primary-h);
-  color:#fff; font-size:12px; font-weight:600;
-  padding:7px 16px; border-radius:var(--btn-radius);
+  color:#fff; font-size:13px; font-weight:600;
+  padding:9px 20px; border-radius:var(--btn-radius);
   cursor:pointer; transition:background .15s;
 }
 #guide-next:hover { background:var(--c-primary-h); }
+@media (max-width:600px) {
+  #guide-card {
+    width: calc(100vw - 32px);
+    left: 16px !important;
+    right: 16px;
+    transform: none !important;
+    padding: 28px 20px 20px;
+  }
+  #guide-icon { font-size:36px; }
+  #guide-title { font-size:16px; }
+  #guide-desc  { font-size:14px; }
+  #guide-next  { font-size:14px; padding:11px 24px; }
+  #guide-skip  { font-size:13px; }
+}
 
 /* ── 타임라인 행 에디터 ── */
 .tl-row {
@@ -1414,6 +1429,7 @@ window.nextGuideStep = function() {
 window.closeGuide = function() {
   document.getElementById('guide-overlay').classList.remove('active');
   localStorage.setItem('oax_guide_shown', '1');
+  switchTab('timeline');
 };
 
 // 첫 방문 시 자동 실행
