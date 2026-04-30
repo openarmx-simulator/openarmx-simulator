@@ -293,6 +293,81 @@ body {
   #guide-skip  { font-size:13px; }
 }
 
+/* ── 모듈 조합 탭 ── */
+.mod-panels { display:flex; flex:1; overflow:hidden; }
+.mod-col { flex:1; display:flex; flex-direction:column; overflow:hidden; border-right:1px solid #181830; }
+.mod-col:last-child { border-right:none; }
+.mod-col-hd { padding:5px 8px; font-size:10px; letter-spacing:1.5px; color:#4a90e2; text-transform:uppercase; background:#080814; border-bottom:1px solid #181830; flex-shrink:0; }
+.mod-filter { display:flex; gap:2px; padding:4px 5px; background:#0a0a1c; border-bottom:1px solid #181830; flex-shrink:0; flex-wrap:wrap; }
+.mod-filter-btn { padding:2px 7px; font-size:10px; background:#111125; border:1px solid #222240; border-radius:3px; color:#556; cursor:pointer; transition:all .1s; }
+.mod-filter-btn.on { background:#1a3a7a; border-color:#4a90e2; color:#4af; }
+.mod-list { flex:1; overflow-y:auto; padding:3px; }
+.mod-list::-webkit-scrollbar { width:3px; }
+.mod-list::-webkit-scrollbar-thumb { background:#222240; border-radius:2px; }
+.mod-card { display:flex; align-items:center; gap:3px; padding:3px 5px; background:#111125; border:1px solid #1c1c35; border-radius:3px; margin-bottom:2px; cursor:pointer; transition:background .1s; }
+.mod-card:hover { background:#181838; }
+.mod-card.selected { border-color:#4a90e2; background:#0e1a30; }
+.mod-id { font-size:9px; font-family:monospace; color:#4a90e2; min-width:40px; }
+.mod-src { font-size:9px; color:#445; min-width:38px; }
+.mod-act-bar { height:5px; border-radius:2px; background:#4a90e2; opacity:.65; min-width:4px; }
+.mod-act-num { font-size:8px; color:#446; min-width:10px; text-align:right; }
+.comp-panel { padding:7px 10px 5px; border-top:1px solid #181830; flex-shrink:0; background:#090914; }
+.comp-row { display:flex; align-items:center; gap:5px; margin-bottom:4px; font-size:11px; }
+.comp-label { color:#445; min-width:52px; font-size:10px; }
+.comp-val { color:#4af; font-family:monospace; flex:1; font-size:10px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.comp-btns { display:flex; gap:3px; margin-top:2px; }
+.comp-btn { flex:1; padding:5px 4px; font-size:10px; font-weight:600; border-radius:4px; border:1px solid; cursor:pointer; transition:all .15s; white-space:nowrap; }
+.comp-btn.left  { background:#0e2050; border-color:#1a4a9a; color:#6af; }
+.comp-btn.left:hover  { background:#1a3a7a; }
+.comp-btn.right { background:#300e0e; border-color:#9a2a1a; color:#f86; }
+.comp-btn.right:hover { background:#4a1a1a; }
+.comp-btn.both  { background:#0d1d0d; border-color:#2a6a2a; color:#6f6; }
+.comp-btn.both:hover  { background:#1a3a1a; }
+.coll-panel { padding:6px 10px 5px; border-top:1px solid #181830; flex-shrink:0; background:#09090f; }
+.coll-btns { display:flex; gap:3px; margin-bottom:5px; }
+.coll-result { font-size:10px; min-height:28px; max-height:72px; overflow-y:auto; padding:4px 7px; background:#0a0a14; border:1px solid #1c1c35; border-radius:4px; line-height:1.65; color:#667; }
+.coll-item { display:flex; align-items:center; gap:5px; margin-bottom:1px; }
+.coll-badge { padding:1px 5px; border-radius:3px; font-size:9px; font-weight:700; }
+.coll-badge.red    { background:#4c0a0a; color:#ff5555; border:1px solid #ff3300; }
+.coll-badge.yellow { background:#3a2a00; color:#ffcc44; border:1px solid #ffaa00; }
+.save-row { display:flex; gap:4px; padding:6px 10px; border-top:1px solid #181830; flex-shrink:0; background:#090914; }
+.save-inp { flex:1; background:#0a0a1e; color:#cde; border:1px solid #222240; border-radius:3px; padding:4px 7px; font-size:11px; outline:none; }
+.save-inp:focus { border-color:#4a90e2; }
+.save-btn { padding:4px 10px; background:var(--c-success); border:1px solid var(--c-success-h); border-radius:4px; color:#6f6; font-size:11px; font-weight:600; cursor:pointer; transition:all .15s; white-space:nowrap; }
+.save-btn:hover { background:var(--c-success-h); }
+.tl-row.coll-warn   { border-color:#ffaa00 !important; }
+.tl-row.coll-danger { border-color:#ff3300 !important; }
+
+/* ── JSON 가져오기 모달 ── */
+#import-modal-bg {
+  display:none; position:fixed; inset:0; z-index:8000;
+  background:rgba(0,0,12,0.82); align-items:center; justify-content:center;
+}
+#import-modal-bg.open { display:flex; }
+#import-modal {
+  width:440px; max-width:calc(100vw - 32px);
+  background:#0e0e22; border:1px solid #2a3a6a;
+  border-radius:12px; padding:22px 20px 16px;
+  box-shadow:0 16px 48px rgba(0,0,0,.8);
+  display:flex; flex-direction:column; gap:10px;
+}
+#import-modal h3 { font-size:14px; font-weight:700; color:#cde; margin:0; }
+#import-modal p  { font-size:11px; color:#668; margin:0; line-height:1.6; }
+#import-textarea {
+  width:100%; height:180px; resize:vertical;
+  background:#08081a; border:1px solid #222250;
+  border-radius:5px; color:#8af; font-family:monospace;
+  font-size:11px; padding:10px; outline:none; line-height:1.5;
+}
+#import-textarea:focus { border-color:#4a90e2; }
+#import-err { font-size:11px; color:#f64; min-height:15px; }
+.import-actions { display:flex; gap:8px; justify-content:flex-end; }
+.import-actions button { padding:8px 20px; border-radius:5px; font-size:12px; font-weight:600; cursor:pointer; transition:all .15s; }
+#import-cancel { background:var(--c-muted); border:1px solid var(--c-border); color:var(--c-text); }
+#import-cancel:hover { background:var(--c-muted-h); }
+#import-confirm { background:var(--c-primary); border:1px solid var(--c-primary-h); color:#fff; }
+#import-confirm:hover { background:var(--c-primary-h); }
+
 /* ── 타임라인 행 에디터 ── */
 .tl-row {
   display:grid;
@@ -324,9 +399,34 @@ body {
   transition:var(--btn-transition);
 }
 .tl-btn:hover { background:var(--c-muted-h); color:var(--c-text-hi); border-color:#3a4a80; }
+
+/* ── 생성 포즈 탭 ── */
+.custom-card { display:flex; align-items:center; gap:6px; padding:6px 8px; background:#111125; border:1px solid #1c1c35; border-radius:5px; margin-bottom:4px; cursor:default; }
+.custom-card:hover { border-color:#2a2a55; }
+.custom-card-id { font-size:10px; font-family:monospace; color:#4a90e2; min-width:42px; font-weight:700; }
+.custom-card-info { flex:1; font-size:10px; color:#556; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.custom-card-btns { display:flex; gap:3px; flex-shrink:0; }
+.c-btn { padding:2px 7px; border-radius:3px; font-size:10px; font-weight:600; cursor:pointer; border:1px solid; transition:all .1s; }
+.c-btn.edit { background:#0e2050; border-color:#1a4a9a; color:#6af; }
+.c-btn.edit:hover { background:#1a3a7a; }
+.c-btn.del  { background:#2a0a0a; border-color:#6a1a1a; color:#f86; }
+.c-btn.del:hover  { background:#4a1a1a; }
+.c-btn.prev { background:#0d1d0d; border-color:#2a5a2a; color:#6f6; }
+.c-btn.prev:hover { background:#1a3a1a; }
+/* ── 타임라인 모드 토글 ── */
+.mode-toggle { display:flex; gap:3px; margin-bottom:8px; }
+.mode-btn { flex:1; padding:5px 6px; font-size:11px; font-weight:600; border-radius:4px; border:1px solid #222240; background:#111125; color:#556; cursor:pointer; text-align:center; transition:all .15s; }
+.mode-btn.active { background:#1a3a7a; border-color:#4a90e2; color:#4af; }
+/* ── 필수 포즈 칩 ── */
+.req-chips-wrap { display:flex; flex-wrap:wrap; gap:4px; margin:4px 0 2px; min-height:20px; }
+.req-chip { display:flex; align-items:center; gap:3px; padding:2px 7px; background:#1a3a1a; border:1px solid #2a6a2a; border-radius:10px; font-size:10px; color:#6f6; }
+.req-chip-rm { background:none; border:none; color:#6f6; cursor:pointer; font-size:11px; line-height:1; padding:0 2px; }
+.req-chip-rm:hover { color:#f86; }
 </style>
 </head>
 <body>
+
+<audio id="bg-audio" style="display:none;" preload="auto"></audio>
 
 <!-- ══ 뷰포트 ══ -->
 <div id="viewport">
@@ -354,34 +454,71 @@ body {
 <!-- ══ 사이드바 ══ -->
 <div id="sidebar">
   <div class="tabs">
-    <div class="tab-btn active" onclick="switchTab('poses')">포즈 목록</div>
-    <div class="tab-btn"       onclick="switchTab('timeline')">타임라인 입력</div>
+    <div class="tab-btn active" onclick="switchTab('poses')">기존 포즈</div>
+    <div class="tab-btn"       onclick="switchTab('custom')">생성 포즈</div>
+    <div class="tab-btn"       onclick="switchTab('timeline')">타임라인</div>
     <div class="tab-btn"       onclick="switchTab('playlist')">재생 목록</div>
+    <div class="tab-btn"       onclick="switchTab('modules')">모듈 조합</div>
   </div>
 
-  <!-- ── 포즈 목록 탭 ── -->
+  <!-- ── 기존 포즈 탭 ── -->
   <div id="tab-poses" class="tab-pane active">
     <div class="scroll" id="pose-list"></div>
+  </div>
+
+  <!-- ── 생성 포즈 탭 ── -->
+  <div id="tab-custom" class="tab-pane">
+    <div class="scroll" id="custom-list">
+      <div class="sec" style="color:#8a8">생성된 포즈가 없습니다.</div>
+    </div>
   </div>
 
   <!-- ── 타임라인 입력 탭 ── -->
   <div id="tab-timeline" class="tab-pane" style="flex-direction:column;overflow:hidden;">
     <!-- AI 생성 헤더 -->
     <div style="padding:10px 12px 8px;border-bottom:1px solid #181830;flex-shrink:0;">
-      <div class="sec" style="margin:0 0 8px">AI 댄스 시퀀스 생성</div>
-      <div style="display:flex;gap:8px;align-items:center;">
-        <label style="font-size:12px;color:#99b;white-space:nowrap;">전체 길이(초)</label>
+      <div class="sec" style="margin:0 0 6px">AI 댄스 시퀀스 생성</div>
+      <!-- 모드 토글 -->
+      <div class="mode-toggle">
+        <div class="mode-btn active" id="mode-btn-time" onclick="setTLMode('time')">⏱ 시간 기반</div>
+        <div class="mode-btn"       id="mode-btn-music" onclick="setTLMode('music')">🎵 음악 파일</div>
+      </div>
+      <!-- 시간 기반 입력 -->
+      <div id="tl-time-inputs" style="display:flex;gap:8px;align-items:center;margin-bottom:6px;">
+        <label style="font-size:11px;color:#99b;white-space:nowrap;">전체 길이(초)</label>
         <input id="gen-duration" type="number" min="5" max="300" value="30"
           style="width:70px;background:#0d1a2a;color:#cde;border:1px solid #223;border-radius:4px;padding:4px 8px;font-size:13px;text-align:center;"/>
-        <button class="apply-btn" id="gen-btn" onclick="generateDance()"
-          style="margin:0;flex:1;">✦ 생성하기</button>
+        <button class="apply-btn" id="gen-btn" onclick="generateDance()" style="margin:0;flex:1;">✦ 생성하기</button>
       </div>
-      <div id="gen-status" style="font-size:11px;color:#68a;min-height:14px;margin-top:5px;"></div>
+      <!-- 음악 파일 입력 -->
+      <div id="tl-music-inputs" style="display:none;gap:8px;align-items:center;margin-bottom:6px;flex-wrap:wrap;">
+        <label style="font-size:11px;color:#99b;white-space:nowrap;">음악 파일</label>
+        <input type="file" id="music-file-inp" accept="audio/*"
+          style="flex:1;font-size:11px;color:#8af;background:#0a0a1e;border:1px solid #222240;border-radius:3px;padding:3px 5px;cursor:pointer;"
+          onchange="handleMusicFile(this)"/>
+        <button class="apply-btn" id="gen-btn-music" onclick="generateDance()" style="margin:0;width:100%;display:none;">✦ 생성하기</button>
+      </div>
+      <!-- 필수 포즈 설정 -->
+      <div style="border-top:1px solid #181830;padding-top:6px;margin-top:2px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+          <span style="font-size:10px;color:#556;letter-spacing:1px;">필수 포즈 (선택사항)</span>
+          <div style="display:flex;gap:4px;align-items:center;">
+            <select id="req-pose-sel" style="background:#0a0a1e;color:#4a90e2;border:1px solid #222240;border-radius:3px;padding:2px 4px;font-size:10px;font-family:monospace;outline:none;max-width:100px;">
+              <optgroup label="기존 포즈" id="req-optgroup-base"></optgroup>
+              <optgroup label="생성 포즈" id="req-optgroup-custom"></optgroup>
+            </select>
+            <button class="exp-btn" style="padding:2px 8px;font-size:10px;" onclick="addReqPose()">+ 추가</button>
+          </div>
+        </div>
+        <div class="req-chips-wrap" id="req-chips"></div>
+      </div>
+      <div id="gen-status" style="font-size:11px;color:#68a;min-height:14px;margin-top:4px;"></div>
     </div>
     <!-- 포즈 목록 헤더 -->
     <div style="padding:6px 12px 4px;border-bottom:1px solid #181830;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;">
       <span style="font-size:10px;letter-spacing:2px;color:#4a90e2;text-transform:uppercase;">포즈 시퀀스</span>
       <div style="display:flex;gap:5px;">
+        <button class="exp-btn" style="padding:4px 10px;font-size:11px;" onclick="showImportModal()">JSON 가져오기</button>
         <button class="exp-btn" style="padding:4px 10px;font-size:11px;" onclick="addTLRow('P-001',0.5)">+ 추가</button>
         <button class="exp-btn" style="padding:4px 10px;font-size:11px;background:var(--c-danger);border-color:var(--c-danger-h);" onclick="clearTL()">초기화</button>
       </div>
@@ -405,12 +542,76 @@ body {
         <div class="sec">시퀀스 선택</div>
         <div id="tid-chips"></div>
       </div>
+      <!-- 음악 파일 연결 -->
+      <div style="margin:6px 0 4px;padding:7px 10px;background:#090914;border:1px solid #181830;border-radius:5px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;">
+          <span style="font-size:10px;letter-spacing:1px;color:#4a90e2;">🎵 음악 연결</span>
+          <span id="pl-music-status" style="font-size:10px;color:#556;">없음</span>
+        </div>
+        <div style="display:flex;gap:5px;align-items:center;">
+          <input type="file" id="pl-music-inp" accept="audio/*"
+            style="flex:1;font-size:10px;color:#8af;background:#0a0a1e;border:1px solid #222240;border-radius:3px;padding:2px 4px;cursor:pointer;"
+            onchange="attachPlaylistMusic(this)"/>
+          <button class="exp-btn" style="padding:3px 8px;font-size:10px;color:#f86;border-color:#6a1a1a;" onclick="detachMusic()">제거</button>
+        </div>
+      </div>
       <div class="sec">키프레임 목록</div>
       <div id="tl-summary"></div>
       <div id="kf-list"></div>
     </div>
     <div style="padding:6px 16px 10px;display:flex;justify-content:flex-end;">
       <button class="exp-btn" style="padding:5px 14px;font-size:11px;flex:none;" onclick="exportYAML()">YAML 내보내기</button>
+    </div>
+  </div>
+
+  <!-- ── 모듈 조합 탭 ── -->
+  <div id="tab-modules" class="tab-pane" style="flex-direction:column;overflow:hidden;">
+    <!-- 좌/우 모듈 패널 -->
+    <div class="mod-panels">
+      <!-- 왼팔 모듈 -->
+      <div class="mod-col">
+        <div class="mod-col-hd">왼팔 모듈</div>
+        <div class="mod-filter" id="l-filter">
+          <button class="mod-filter-btn on" onclick="setModFilter('L',0)">전체</button>
+          <button class="mod-filter-btn"    onclick="setModFilter('L',1)">저</button>
+          <button class="mod-filter-btn"    onclick="setModFilter('L',2)">중</button>
+          <button class="mod-filter-btn"    onclick="setModFilter('L',3)">고</button>
+        </div>
+        <div class="mod-list" id="l-mod-list"></div>
+      </div>
+      <!-- 오른팔 모듈 -->
+      <div class="mod-col">
+        <div class="mod-col-hd">오른팔 모듈</div>
+        <div class="mod-filter" id="r-filter">
+          <button class="mod-filter-btn on" onclick="setModFilter('R',0)">전체</button>
+          <button class="mod-filter-btn"    onclick="setModFilter('R',1)">저</button>
+          <button class="mod-filter-btn"    onclick="setModFilter('R',2)">중</button>
+          <button class="mod-filter-btn"    onclick="setModFilter('R',3)">고</button>
+        </div>
+        <div class="mod-list" id="r-mod-list"></div>
+      </div>
+    </div>
+    <!-- 복합 포즈 조합 -->
+    <div class="comp-panel">
+      <div class="sec" style="margin:0 0 5px">복합 포즈 조합</div>
+      <div class="comp-row">
+        <span class="comp-label">왼팔 모듈</span>
+        <span class="comp-val" id="comp-l-val">—</span>
+      </div>
+      <div class="comp-row">
+        <span class="comp-label">오른팔 모듈</span>
+        <span class="comp-val" id="comp-r-val">—</span>
+      </div>
+    </div>
+    <!-- 실시간 충돌 상태 -->
+    <div class="coll-panel">
+      <div class="sec" style="margin:0 0 5px">실시간 충돌 상태</div>
+      <div class="coll-result" id="coll-result">모듈을 선택하면 자동으로 검사됩니다.</div>
+    </div>
+    <!-- 포즈 저장 -->
+    <div class="save-row">
+      <span id="editing-indicator" style="font-size:10px;color:#4a90e2;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
+      <button class="save-btn" onclick="saveComposite()">포즈 저장</button>
     </div>
   </div>
 </div>
@@ -604,7 +805,98 @@ const POSE_DB = {
   'P-166':{L1:-0.12,L2:-1.5,L3:-0.06,L4:0.32,L5:0,L6:-0.02,L7:0,R1:0.08,R2:1.86,R3:-0.96,R4:1.54,R5:-0.12,R6:0.18,R7:-0.62},
   'P-167':{L1:-0.12,L2:-1.5,L3:-0.06,L4:0.32,L5:0,L6:-0.02,L7:0,R1:0,R2:2,R3:-1.3,R4:1.12,R5:0.09,R6:0.41,R7:-1.4},
   'P-168':{L1:-0.1,L2:-1.48,L3:-0.04,L4:0.26,L5:-0.02,L6:-0.02,L7:0,R1:0.1,R2:1.48,R3:0.04,R4:0.26,R5:0.02,R6:0.02,R7:0},
+  // P-169 ~ P-188: 추가 포즈
+  'P-169':{L1:-0.42,L2:-1.18,L3:0.46,L4:1.18,L5:0.02,L6:-0.08,L7:0.28,R1:0.42,R2:1.02,R3:-0.40,R4:1.06,R5:-0.02,R6:0.08,R7:-0.20},
+  'P-170':{L1:-0.56,L2:-1.34,L3:0.82,L4:1.36,L5:0.08,L6:-0.12,L7:0.72,R1:0.34,R2:1.06,R3:-0.74,R4:1.18,R5:-0.06,R6:0.10,R7:-0.34},
+  'P-171':{L1:-0.64,L2:-1.46,L3:1.12,L4:1.58,L5:0.10,L6:-0.16,L7:1.02,R1:0.28,R2:0.98,R3:-1.02,R4:1.32,R5:-0.08,R6:0.12,R7:-0.46},
+  'P-172':{L1:-0.72,L2:-1.28,L3:0.88,L4:1.42,L5:0.16,L6:-0.12,L7:0.84,R1:0.22,R2:0.92,R3:-0.62,R4:1.06,R5:-0.12,R6:0.06,R7:-0.28},
+  'P-173':{L1:-0.78,L2:-1.38,L3:1.16,L4:1.64,L5:0.22,L6:-0.14,L7:1.12,R1:0.18,R2:0.86,R3:-0.86,R4:1.18,R5:-0.16,R6:0.08,R7:-0.36},
+  'P-174':{L1:-0.42,L2:-1.02,L3:0.40,L4:1.06,L5:0.02,L6:-0.08,L7:0.20,R1:0.42,R2:1.18,R3:-0.46,R4:1.18,R5:-0.02,R6:0.08,R7:-0.28},
+  'P-175':{L1:-0.34,L2:-1.06,L3:0.74,L4:1.18,L5:0.06,L6:-0.10,L7:0.34,R1:0.56,R2:1.34,R3:-0.82,R4:1.36,R5:-0.08,R6:0.12,R7:-0.72},
+  'P-176':{L1:-0.28,L2:-0.98,L3:1.02,L4:1.32,L5:0.08,L6:-0.12,L7:0.46,R1:0.64,R2:1.46,R3:-1.12,R4:1.58,R5:-0.10,R6:0.16,R7:-1.02},
+  'P-177':{L1:-0.58,L2:-1.42,L3:1.26,L4:1.72,L5:0.12,L6:-0.18,L7:1.18,R1:0.24,R2:0.88,R3:-1.18,R4:1.48,R5:-0.10,R6:0.14,R7:-0.52},
+  'P-178':{L1:-0.24,L2:-0.88,L3:1.18,L4:1.48,L5:0.10,L6:-0.14,L7:0.52,R1:0.58,R2:1.42,R3:-1.26,R4:1.72,R5:-0.12,R6:0.18,R7:-1.18},
+  'P-179':{L1:-0.62,L2:-1.30,L3:0.96,L4:1.46,L5:0.10,L6:-0.14,L7:0.92,R1:0.10,R2:0.56,R3:-0.08,R4:0.42,R5:-0.04,R6:0.00,R7:-0.08},
+  'P-180':{L1:-0.10,L2:-0.56,L3:0.08,L4:0.42,L5:0.04,L6:0.00,L7:0.08,R1:0.62,R2:1.30,R3:-0.96,R4:1.46,R5:-0.10,R6:0.14,R7:-0.92},
+  'P-181':{L1:-0.52,L2:-0.24,L3:0.34,L4:1.18,L5:-0.04,L6:-0.06,L7:-0.32,R1:0.52,R2:0.24,R3:-0.34,R4:1.18,R5:-0.04,R6:0.06,R7:0.32},
+  'P-182':{L1:-0.46,L2:-0.22,L3:0.26,L4:0.98,L5:-0.06,L6:-0.06,L7:-0.34,R1:0.86,R2:0.34,R3:-0.44,R4:1.18,R5:0.00,R6:0.06,R7:0.48},
+  'P-183':{L1:-0.62,L2:-0.30,L3:0.34,L4:1.08,L5:-0.08,L6:-0.08,L7:-0.46,R1:1.02,R2:0.46,R3:-0.58,R4:1.34,R5:0.02,R6:0.08,R7:0.62},
+  'P-184':{L1:-0.66,L2:-0.18,L3:0.28,L4:1.12,L5:-0.02,L6:-0.04,L7:-0.26,R1:0.66,R2:0.18,R3:-0.28,R4:1.12,R5:-0.02,R6:0.04,R7:0.26},
+  'P-185':{L1:-0.30,L2:-0.32,L3:0.52,L4:1.46,L5:-0.08,L6:-0.10,L7:-0.60,R1:0.70,R2:0.32,R3:-0.52,R4:1.46,R5:-0.04,R6:-0.10,R7:0.60},
+  'P-186':{L1:-0.38,L2:-0.24,L3:0.74,L4:1.58,L5:-0.10,L6:-0.10,L7:-0.68,R1:0.57,R2:0.27,R3:-0.58,R4:1.00,R5:0.02,R6:-0.10,R7:0.68},
+  'P-187':{L1:-0.32,L2:-0.28,L3:0.60,L4:1.40,L5:-0.08,L6:-0.08,L7:-0.56,R1:0.62,R2:0.28,R3:-0.58,R4:1.24,R5:-0.02,R6:-0.08,R7:0.56},
+  'P-188':{L1:-0.46,L2:-0.28,L3:0.96,L4:1.72,L5:-0.12,L6:-0.14,L7:-0.82,R1:0.48,R2:0.24,R3:-0.62,R4:1.08,R5:0.02,R6:-0.10,R7:0.58},
+  'P-189':{L1:-0.48,L2:-0.24,L3:0.62,L4:1.08,L5:-0.02,L6:-0.10,L7:-0.58,R1:0.46,R2:0.28,R3:-0.96,R4:1.72,R5:0.12,R6:-0.14,R7:0.82},
+  'P-190':{L1:-0.36,L2:-0.20,L3:0.28,L4:0.94,L5:-0.04,L6:-0.04,L7:-0.24,R1:0.64,R2:0.30,R3:-0.60,R4:1.24,R5:0.02,R6:0.08,R7:0.52},
+  'P-191':{L1:-0.28,L2:-0.18,L3:0.48,L4:1.18,L5:-0.04,L6:-0.06,L7:-0.42,R1:0.28,R2:0.18,R3:-0.48,R4:1.18,R5:-0.02,R6:-0.06,R7:0.42},
+  'P-192':{L1:-0.28,L2:-0.16,L3:0.40,L4:1.02,L5:-0.04,L6:-0.04,L7:-0.30,R1:0.28,R2:0.16,R3:-0.40,R4:1.02,R5:-0.02,R6:0.04,R7:0.30},
+  'P-193':{L1:-1.06,L2:-0.87,L3:0.86,L4:1.69,L5:-0.11,L6:-0.12,L7:-0.74,R1:1.14,R2:0.61,R3:-0.91,R4:1.24,R5:0.04,R6:-0.13,R7:0.74},
+  'P-194':{L1:-0.82,L2:-0.62,L3:0.64,L4:1.34,L5:-0.08,L6:-0.08,L7:-0.52,R1:0.88,R2:0.42,R3:-0.58,R4:0.92,R5:0.02,R6:-0.08,R7:0.48},
+  'P-195':{L1:-0.94,L2:-0.74,L3:0.76,L4:1.50,L5:-0.10,L6:-0.10,L7:-0.64,R1:1.02,R2:0.52,R3:-0.74,R4:1.08,R5:0.02,R6:-0.10,R7:0.60},
+  'P-196':{L1:-1.12,L2:-0.94,L3:0.94,L4:1.74,L5:-0.12,L6:-0.14,L7:-0.82,R1:1.08,R2:0.56,R3:-0.82,R4:1.16,R5:0.04,R6:-0.12,R7:0.66},
+  'P-197':{L1:-0.70,L2:-0.48,L3:0.50,L4:1.10,L5:-0.06,L6:-0.06,L7:-0.36,R1:0.76,R2:0.34,R3:-0.46,R4:0.82,R5:0.02,R6:-0.06,R7:0.34},
+  'P-198':{L1:-0.88,L2:-0.42,L3:0.58,L4:0.92,L5:-0.02,L6:-0.08,L7:-0.48,R1:0.82,R2:0.62,R3:-0.64,R4:1.34,R5:0.08,R6:-0.08,R7:0.52},
+  'P-199':{L1:-1.02,L2:-0.52,L3:0.74,L4:1.08,L5:-0.02,L6:-0.10,L7:-0.60,R1:0.94,R2:0.74,R3:-0.76,R4:1.50,R5:0.10,R6:-0.10,R7:0.64},
+  'P-200':{L1:-1.08,L2:-0.56,L3:0.82,L4:1.16,L5:-0.04,L6:-0.12,L7:-0.66,R1:1.12,R2:0.94,R3:-0.94,R4:1.74,R5:0.12,R6:-0.14,R7:0.82},
+  'P-201':{L1:-0.76,L2:-0.34,L3:0.46,L4:0.82,L5:-0.02,L6:-0.06,L7:-0.34,R1:0.70,R2:0.48,R3:-0.50,R4:1.10,R5:0.06,R6:-0.06,R7:0.36},
+  'P-202':{L1:-0.90,L2:-0.66,L3:0.70,L4:1.34,L5:-0.08,L6:-0.08,L7:-0.56,R1:0.92,R2:0.58,R3:-0.70,R4:1.18,R5:0.04,R6:-0.08,R7:0.56},
 };
+
+// ════════════════════════════════════════════════════════════
+//  Arm Module DB — POSE_DB에서 왼팔/오른팔 자동 분리
+// ════════════════════════════════════════════════════════════
+function _actLv(angles) {
+  // sum range ~0-8 rad across 7 joints → map to 1-10
+  const sum = Object.values(angles).reduce((s, v) => s + Math.abs(v), 0);
+  return Math.max(1, Math.min(10, Math.ceil(sum / 0.8)));
+}
+
+// 정렬 기준: 중립(정자세) → 팔 올라감(L2/R2) → 바깥쪽 회전(L1/R1) → 굽힘(L4/R4)
+function _lScore(a) {
+  return 1.5*Math.abs(a.L2) + 1.2*Math.abs(a.L1) + 0.5*Math.abs(a.L4) + 0.3*Math.abs(a.L3);
+}
+function _rScore(a) {
+  return 1.5*Math.abs(a.R2) + 1.2*Math.abs(a.R1) + 0.5*Math.abs(a.R4) + 0.3*Math.abs(a.R3);
+}
+
+const ARM_MODULE_DB = { left: {}, right: {} };
+
+const _lEntries = Object.entries(POSE_DB).map(([pid, p]) => ({
+  source: pid,
+  angles: { L1:p.L1,L2:p.L2,L3:p.L3,L4:p.L4,L5:p.L5,L6:p.L6,L7:p.L7 }
+}));
+const _rEntries = Object.entries(POSE_DB).map(([pid, p]) => ({
+  source: pid,
+  angles: { R1:p.R1,R2:p.R2,R3:p.R3,R4:p.R4,R5:p.R5,R6:p.R6,R7:p.R7 }
+}));
+
+_lEntries.sort((a, b) => _lScore(a.angles) - _lScore(b.angles));
+_rEntries.sort((a, b) => _rScore(a.angles) - _rScore(b.angles));
+
+_lEntries.forEach((e, i) => {
+  const id = `L-${String(i+1).padStart(3,'0')}`;
+  ARM_MODULE_DB.left[id]  = { angles: e.angles, source: e.source, activity: _actLv(e.angles) };
+});
+_rEntries.forEach((e, i) => {
+  const id = `R-${String(i+1).padStart(3,'0')}`;
+  ARM_MODULE_DB.right[id] = { angles: e.angles, source: e.source, activity: _actLv(e.angles) };
+});
+
+// 생성 포즈 (N-series) 메타 데이터
+const CUSTOM_POSE_META = {};   // { 'N-001': { lMod, rMod } }
+let editingNPoseId = null;     // 수정 중인 N-포즈 ID
+
+// 타임라인 모드 & 필수 포즈
+let tlMode = 'time';           // 'time' | 'music'
+let musicDuration = 0;
+let reqPoses = [];             // [poseId, ...]
+
+// 모듈 선택 상태
+let selectedLModule = null;
+let selectedRModule = null;
+let lModFilter = 0;  // 0=전체, 1=저(1-3), 2=중(4-6), 3=고(7-10)
+let rModFilter = 0;
+let lastFocusedSide = null; // 방향키 내비게이션용
 
 // ════════════════════════════════════════════════════════════
 //  키네마틱 체인 (URDF 기반, Z-up 좌표계)
@@ -853,11 +1145,22 @@ function nearestPoseId(t) {
 let isPlaying = false, isLooping = true;
 let startWall = 0, pauseOffset = 0;
 const scrubber = document.getElementById('scrubber');
+const bgAudio  = document.getElementById('bg-audio');
+let musicBlobUrl = null;
 
 function totalDur() {
   const tl = activeTimeline();
   return tl.length ? tl[tl.length-1].time : 0;
 }
+
+function _audioPlay(t) {
+  if (!musicBlobUrl) return;
+  bgAudio.currentTime = Math.min(t, bgAudio.duration || Infinity);
+  bgAudio.play().catch(() => {});
+}
+function _audioPause() { if (!bgAudio.paused) bgAudio.pause(); }
+function _audioStop()  { bgAudio.pause(); bgAudio.currentTime = 0; }
+function _audioSeek(t) { if (musicBlobUrl && isFinite(bgAudio.duration)) bgAudio.currentTime = Math.min(t, bgAudio.duration); }
 
 window.playAnim = function() {
   if (!activeTimeline().length) { alert('재생 목록 탭에서 타임라인을 먼저 적용하세요.'); return; }
@@ -865,6 +1168,7 @@ window.playAnim = function() {
   isPlaying = true;
   document.getElementById('btn-play').classList.add('on');
   document.getElementById('btn-pause').classList.remove('on');
+  _audioPlay(pauseOffset);
 };
 window.pauseAnim = function() {
   if (!isPlaying) return;
@@ -874,6 +1178,7 @@ window.pauseAnim = function() {
   isPlaying = false;
   document.getElementById('btn-pause').classList.add('on');
   document.getElementById('btn-play').classList.remove('on');
+  _audioPause();
 };
 window.stopAnim = function() {
   isPlaying = false; pauseOffset = 0;
@@ -881,6 +1186,7 @@ window.stopAnim = function() {
   scrubber.value = 0;
   updateTimeLbl(0);
   updateFK(q);
+  _audioStop();
 };
 window.toggleLoop = function() {
   isLooping = !isLooping;
@@ -896,6 +1202,7 @@ scrubber.addEventListener('input', () => {
   updateTimeLbl(t);
   document.getElementById('cur-pose-id').textContent = nearestPoseId(t);
   highlightKFRow(t);
+  _audioSeek(t);
 });
 
 function updateTimeLbl(t) {
@@ -1140,13 +1447,29 @@ function buildDanceSequence(N) {
 }
 
 window.generateDance = function() {
-  const duration = parseFloat(document.getElementById('gen-duration').value);
   const statusEl = document.getElementById('gen-status');
-  if (!duration || duration < 5) { statusEl.textContent = '⚠ 5초 이상의 시간을 입력하세요.'; return; }
+  let duration;
+  if (tlMode === 'music') {
+    if (!musicDuration) { statusEl.textContent = '⚠ 음악 파일을 먼저 선택하세요.'; return; }
+    duration = musicDuration;
+  } else {
+    duration = parseFloat(document.getElementById('gen-duration').value);
+    if (!duration || duration < 5) { statusEl.textContent = '⚠ 5초 이상의 시간을 입력하세요.'; return; }
+  }
 
   const timeline = buildDanceSequence(duration);
   // JSON → 행 에디터로 변환
   tlRows = [];
+
+  // 필수 포즈가 있으면 균등 분배로 삽입
+  if (reqPoses.length) {
+    const step = Math.max(1, Math.floor(timeline.length / (reqPoses.length + 1)));
+    reqPoses.forEach((pid, i) => {
+      const idx = Math.min(step * (i + 1), timeline.length);
+      timeline.splice(idx, 0, { time: 0, pose_id: pid });
+    });
+  }
+
   for (let i = 0; i < timeline.length; i++) {
     const dur = i < timeline.length - 1
       ? +((timeline[i+1].time - timeline[i].time).toFixed(1))
@@ -1154,7 +1477,97 @@ window.generateDance = function() {
     tlRows.push({ pose_id: timeline[i].pose_id, duration: Math.max(0.1, dur) });
   }
   renderTLRows();
-  statusEl.textContent = `✓ ${timeline.length}개 포즈 생성 완료. 수정 후 적용하세요.`;
+  const reqNote = reqPoses.length ? ` (필수 ${reqPoses.length}개 포함)` : '';
+  statusEl.textContent = `✓ ${timeline.length}개 포즈 생성 완료${reqNote}. 수정 후 적용하세요.`;
+};
+
+// ════════════════════════════════════════════════════════════
+//  JSON 가져오기 모달
+// ════════════════════════════════════════════════════════════
+window.showImportModal = function() {
+  document.getElementById('import-textarea').value = '';
+  document.getElementById('import-err').textContent = '';
+  document.getElementById('import-modal-bg').classList.add('open');
+  setTimeout(() => document.getElementById('import-textarea').focus(), 60);
+};
+
+window.hideImportModal = function() {
+  document.getElementById('import-modal-bg').classList.remove('open');
+};
+
+// ESC 키로 닫기
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') hideImportModal();
+});
+// 배경 클릭으로 닫기
+document.getElementById('import-modal-bg').addEventListener('click', e => {
+  if (e.target === document.getElementById('import-modal-bg')) hideImportModal();
+});
+
+window.confirmImport = function() {
+  const errEl = document.getElementById('import-err');
+  const text  = document.getElementById('import-textarea').value.trim();
+  errEl.textContent = '';
+
+  if (!text) { errEl.textContent = '⚠ JSON을 입력하세요.'; return; }
+
+  let data;
+  try { data = JSON.parse(text); }
+  catch(e) { errEl.textContent = '⚠ JSON 파싱 오류: ' + e.message; return; }
+
+  if (!Array.isArray(data) || !data.length) {
+    errEl.textContent = '⚠ 배열 형식이 필요합니다: [ ... ]';
+    return;
+  }
+
+  // 지원 형식 감지 및 변환
+  let rows;
+  try {
+    // 형식 1: [{pose_id, duration}]  형식 2: [{time, pose_id}]  형식 3: ["P-001", ...]
+    const isKF      = data[0].time !== undefined && data[0].pose_id;
+    const isDirect  = data[0].pose_id !== undefined && data[0].time === undefined;
+    const isStrings = typeof data[0] === 'string';
+
+    if (isKF) {
+      // 키프레임 형식 → duration 계산
+      rows = data.map((kf, i) => {
+        const next = data[i + 1];
+        const dur  = next ? +(next.time - kf.time).toFixed(2) : 0.5;
+        return { pose_id: kf.pose_id, duration: Math.max(0.1, dur) };
+      });
+    } else if (isDirect) {
+      rows = data.map(d => ({
+        pose_id:  d.pose_id,
+        duration: d.duration ? +parseFloat(d.duration).toFixed(2) : 0.5,
+      }));
+    } else if (isStrings) {
+      rows = data.map(id => ({ pose_id: id, duration: 0.5 }));
+    } else {
+      errEl.textContent = '⚠ 지원하지 않는 형식입니다.';
+      return;
+    }
+  } catch(e) {
+    errEl.textContent = '⚠ 데이터 변환 오류: ' + e.message;
+    return;
+  }
+
+  // pose_id 존재 여부 검증
+  const unknown = rows.filter(r => !POSE_DB[r.pose_id]).map(r => r.pose_id);
+  if (unknown.length) {
+    errEl.textContent = `⚠ 존재하지 않는 포즈: ${unknown.slice(0,5).join(', ')}${unknown.length > 5 ? ' 외 ' + (unknown.length - 5) + '개' : ''}`;
+    return;
+  }
+
+  // duration 이상값 클램프
+  rows = rows.map(r => ({ ...r, duration: Math.min(30, Math.max(0.1, r.duration)) }));
+
+  tlRows = rows;
+  renderTLRows();
+  hideImportModal();
+  switchTab('timeline');
+  setStatus(`✓ JSON 가져오기 완료 — ${rows.length}개 포즈`);
+  document.getElementById('gen-status').textContent =
+    `✓ JSON으로 ${rows.length}개 포즈 불러옴. 수정 후 적용하세요.`;
 };
 
 window.exportJSON = function() {
@@ -1203,16 +1616,308 @@ window.exportYAML = function() {
 //  UI 렌더링
 // ════════════════════════════════════════════════════════════
 
-// 포즈 목록
+// ────────────────────────────────────────────────────────────
+//  모듈 조합 패널
+// ────────────────────────────────────────────────────────────
+function _modRange(f) {
+  if (f === 1) return [1, 3];
+  if (f === 2) return [4, 6];
+  if (f === 3) return [7, 10];
+  return [1, 10];
+}
+
+window.setModFilter = function(side, f) {
+  if (side === 'L') { lModFilter = f; renderModList('L'); }
+  else              { rModFilter = f; renderModList('R'); }
+  const wrap = document.getElementById(side === 'L' ? 'l-filter' : 'r-filter');
+  wrap.querySelectorAll('.mod-filter-btn').forEach((b, i) => b.classList.toggle('on', i === f));
+};
+
+function renderModList(side) {
+  const db  = side === 'L' ? ARM_MODULE_DB.left : ARM_MODULE_DB.right;
+  const f   = side === 'L' ? lModFilter : rModFilter;
+  const sel = side === 'L' ? selectedLModule : selectedRModule;
+  const [mn, mx] = _modRange(f);
+  const listEl = document.getElementById(side === 'L' ? 'l-mod-list' : 'r-mod-list');
+  listEl.innerHTML = '';
+  Object.entries(db).forEach(([id, mod]) => {
+    if (mod.activity < mn || mod.activity > mx) return;
+    const card = document.createElement('div');
+    card.className = 'mod-card' + (id === sel ? ' selected' : '');
+    card.id = `mc-${id}`;
+    const bw = Math.round(mod.activity * 12);
+    card.innerHTML =
+      `<span class="mod-id">${id}</span>` +
+      `<span class="mod-src">${mod.source}</span>` +
+      `<span class="mod-act-bar" style="width:${bw}px"></span>` +
+      `<span class="mod-act-num">${mod.activity}</span>`;
+    card.onclick = () => {
+      listEl.querySelectorAll('.mod-card').forEach(c => c.classList.remove('selected'));
+      card.classList.add('selected');
+      if (side === 'L') selectedLModule = id;
+      else              selectedRModule = id;
+      lastFocusedSide = side;
+      // 즉시 해당 팔 적용
+      Object.assign(q, mod.angles);
+      updateFK(q);
+      document.getElementById('cur-pose-id').textContent =
+        (selectedLModule || '?') + '+' + (selectedRModule || '?');
+      setStatus(`${side === 'L' ? '왼팔' : '오른팔'} 모듈 ${id} 적용됨`);
+      _updateCompPanel();
+      _runRealtimeCheck();
+    };
+    listEl.appendChild(card);
+  });
+}
+
+function _updateCompPanel() {
+  const lM = selectedLModule ? ARM_MODULE_DB.left[selectedLModule]   : null;
+  const rM = selectedRModule ? ARM_MODULE_DB.right[selectedRModule]  : null;
+  const lEl = document.getElementById('comp-l-val');
+  const rEl = document.getElementById('comp-r-val');
+  if (lEl) lEl.textContent = lM ? `${selectedLModule}  (${lM.source}, lv.${lM.activity})` : '—';
+  if (rEl) rEl.textContent = rM ? `${selectedRModule}  (${rM.source}, lv.${rM.activity})` : '—';
+}
+
+function renderModulePanel() {
+  renderModList('L');
+  renderModList('R');
+  _updateCompPanel();
+}
+
+// 방향키 내비게이션 — 모듈 탭이 활성일 때만 동작
+document.addEventListener('keydown', e => {
+  if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+  const modTab = document.getElementById('tab-modules');
+  if (!modTab || !modTab.classList.contains('active')) return;
+  if (!lastFocusedSide) return;
+  e.preventDefault();
+
+  const side   = lastFocusedSide;
+  const listEl = document.getElementById(side === 'L' ? 'l-mod-list' : 'r-mod-list');
+  const cards  = Array.from(listEl.querySelectorAll('.mod-card'));
+  if (!cards.length) return;
+
+  const selId  = side === 'L' ? selectedLModule : selectedRModule;
+  const curIdx = selId ? cards.findIndex(c => c.id === `mc-${selId}`) : -1;
+
+  const nextIdx = e.key === 'ArrowDown'
+    ? Math.min(cards.length - 1, curIdx + 1)
+    : Math.max(0, curIdx - 1);
+
+  if (nextIdx !== curIdx) {
+    cards[nextIdx].click();
+    cards[nextIdx].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+});
+
+// ── 실시간 충돌 검사 ──
+function _runRealtimeCheck() {
+  const risks = _checkStatic(q);
+  highlightLinks(risks);
+  _showCollResult(risks, '실시간');
+}
+
+window.saveComposite = function() {
+  if (!selectedLModule && !selectedRModule) {
+    alert('왼팔 또는 오른팔 모듈을 먼저 선택하세요.');
+    return;
+  }
+
+  if (editingNPoseId) {
+    // 기존 N-포즈 수정
+    const id = editingNPoseId;
+    POSE_DB[id] = {
+      L1:q.L1||0, L2:q.L2||0, L3:q.L3||0, L4:q.L4||0,
+      L5:q.L5||0, L6:q.L6||0, L7:q.L7||0,
+      R1:q.R1||0, R2:q.R2||0, R3:q.R3||0, R4:q.R4||0,
+      R5:q.R5||0, R6:q.R6||0, R7:q.R7||0,
+    };
+    CUSTOM_POSE_META[id] = { lMod: selectedLModule, rMod: selectedRModule };
+    editingNPoseId = null;
+    document.getElementById('editing-indicator').textContent = '';
+    renderCustomPoseList();
+    renderTLRows();
+    _updateReqPoseSelect();
+    setStatus(`✓ ${id} 수정됨`);
+    switchTab('custom');
+    return;
+  }
+
+  // 새 N-포즈 생성
+  const nums = Object.keys(CUSTOM_POSE_META)
+    .map(k => parseInt(k.replace('N-', '')))
+    .filter(n => !isNaN(n));
+  const nextNum = nums.length ? Math.max(...nums) + 1 : 1;
+  const newId = `N-${String(nextNum).padStart(3, '0')}`;
+  POSE_DB[newId] = {
+    L1:q.L1||0, L2:q.L2||0, L3:q.L3||0, L4:q.L4||0,
+    L5:q.L5||0, L6:q.L6||0, L7:q.L7||0,
+    R1:q.R1||0, R2:q.R2||0, R3:q.R3||0, R4:q.R4||0,
+    R5:q.R5||0, R6:q.R6||0, R7:q.R7||0,
+  };
+  CUSTOM_POSE_META[newId] = { lMod: selectedLModule, rMod: selectedRModule };
+  POSE_IDS.push(newId);
+  renderCustomPoseList();
+  renderTLRows();
+  _updateReqPoseSelect();
+  setStatus(`✓ ${newId} 생성 포즈에 추가됨`);
+  switchTab('custom');
+  setTimeout(() => {
+    const card = document.getElementById(`cc-${newId}`);
+    if (card) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, 50);
+};
+
+// ── 충돌 검사 ──
+
+function _checkStatic(angles) {
+  const risks = [];
+  const L1=angles.L1||0, L2=angles.L2||0, L4=angles.L4||0;
+  const R1=angles.R1||0, R2=angles.R2||0, R4=angles.R4||0;
+
+  if (Math.abs(L1) > 1.5 && Math.abs(R1) > 1.5)
+    risks.push({ level:'red',    links:['L1','R1'], msg:'양팔 어깨(J1) 고각 — 충돌 위험' });
+
+  if (L4 > 1.5 && R4 > 1.5)
+    risks.push({ level:'yellow', links:['L4','R4'], msg:'양팔 팔꿈치(J4) 상승 — 근접 경고' });
+
+  if (Math.abs(L2) > 1.3 && Math.abs(R2) > 1.3)
+    risks.push({ level:'yellow', links:['L2','R2'], msg:'양팔 어깨(J2) 고각 — 근접 경고' });
+
+  const mag = ['L1','L2','L3','L4','R1','R2','R3','R4']
+    .reduce((s, k) => s + Math.abs(angles[k]||0), 0);
+  if (mag > 9.0 && !risks.length)
+    risks.push({ level:'yellow', links:[], msg:'고강도 복합 포즈 — 주의 필요' });
+
+  return risks;
+}
+
+function _checkTransition(angA, angB, frames = 15) {
+  const hits = [];
+  const KEYS = ['L1','L2','L3','L4','L5','L6','L7','R1','R2','R3','R4','R5','R6','R7'];
+  for (let i = 0; i <= frames; i++) {
+    const t = i / frames;
+    const s = t * t * (3 - 2 * t);
+    const mid = {};
+    KEYS.forEach(k => { mid[k] = (angA[k]||0) + ((angB[k]||0) - (angA[k]||0)) * s; });
+    const risks = _checkStatic(mid);
+    if (risks.length) hits.push({ frame: i, pct: Math.round(t * 100), risks });
+  }
+  return hits;
+}
+
+window.runStaticCheck = function() {
+  const risks = _checkStatic(q);
+  highlightLinks(risks);
+  _showCollResult(risks, '정적');
+};
+
+window.runTransitionCheck = function() {
+  const resultEl = document.getElementById('coll-result');
+  if (tlRows.length < 2) {
+    if (resultEl) resultEl.textContent = '전환 검사: 타임라인에 포즈가 2개 이상 필요합니다.';
+    return;
+  }
+  const allHits = [];
+  for (let i = 0; i < tlRows.length - 1; i++) {
+    const pA = poseToAngles(tlRows[i].pose_id);
+    const pB = poseToAngles(tlRows[i + 1].pose_id);
+    if (!pA || !pB) continue;
+    const hits = _checkTransition(pA, pB, 15);
+    if (hits.length) allHits.push({ from: tlRows[i].pose_id, to: tlRows[i+1].pose_id, hits });
+  }
+  _markTLCollision(allHits);
+  if (!resultEl) return;
+  if (!allHits.length) {
+    resultEl.innerHTML = '<span style="color:#4f6">✓ 전환 구간 충돌 없음</span>';
+    return;
+  }
+  resultEl.innerHTML = allHits.map(r => {
+    const lvl = r.hits.some(h => h.risks.some(rk => rk.level === 'red')) ? 'red' : 'yellow';
+    return `<div class="coll-item"><span class="coll-badge ${lvl}">${lvl==='red'?'위험':'경고'}</span>` +
+           `<span style="color:#aab;font-size:10px;">&nbsp;${r.from}→${r.to}: ${r.hits.length}프레임 충돌</span></div>`;
+  }).join('');
+};
+
+function _markTLCollision(allHits) {
+  const danger = new Set(allHits
+    .filter(r => r.hits.some(h => h.risks.some(rk => rk.level === 'red')))
+    .map(r => `${r.from}|${r.to}`));
+  const warn = new Set(allHits
+    .filter(r => !danger.has(`${r.from}|${r.to}`))
+    .map(r => `${r.from}|${r.to}`));
+  document.querySelectorAll('.tl-row').forEach((row, i) => {
+    row.classList.remove('coll-warn', 'coll-danger');
+    if (i < tlRows.length - 1) {
+      const key = `${tlRows[i].pose_id}|${tlRows[i+1].pose_id}`;
+      if (danger.has(key)) row.classList.add('coll-danger');
+      else if (warn.has(key)) row.classList.add('coll-warn');
+    }
+  });
+}
+
+function _showCollResult(risks, mode) {
+  const el = document.getElementById('coll-result');
+  if (!el) return;
+  if (!risks.length) {
+    el.innerHTML = `<span style="color:#4f6">✓ ${mode} 검사: 충돌 없음</span>`;
+    return;
+  }
+  el.innerHTML = risks.map(r =>
+    `<div class="coll-item"><span class="coll-badge ${r.level}">${r.level==='red'?'위험':'경고'}</span>` +
+    `<span style="color:#aab;font-size:10px;">&nbsp;${r.msg}</span></div>`
+  ).join('');
+}
+
+// ── 링크 하이라이트 ──
+
+function _setLinkColor(linkName, hex, ei) {
+  const g = groups[linkName];
+  if (!g) return;
+  g.traverse(obj => {
+    if (obj.isMesh && obj.material) {
+      obj.material.color.setHex(hex);
+      obj.material.emissive.setHex(hex);
+      obj.material.emissiveIntensity = ei;
+    }
+  });
+}
+
+function highlightLinks(risks) {
+  clearHighlights();
+  const red = new Set(), yellow = new Set();
+  risks.forEach(r => r.links.forEach(lk => {
+    if (r.level === 'red') red.add(lk);
+    else if (!red.has(lk)) yellow.add(lk);
+  }));
+  red.forEach(lk    => _setLinkColor(lk, 0xff2200, 0.6));
+  yellow.forEach(lk => _setLinkColor(lk, 0xffaa00, 0.45));
+}
+
+window.clearHighlights = function() {
+  CHAIN.forEach(lk => {
+    const n = lk.name;
+    if (n === 'body' || n === 'L0' || n === 'R0') return;
+    if (n.includes('tcp') || n.includes('_f') || n.includes('hand')) return;
+    if (n.startsWith('L')) _setLinkColor(n, 0x1a4a9a, 0.08);
+    else if (n.startsWith('R')) _setLinkColor(n, 0x9a2a1a, 0.08);
+  });
+  const el = document.getElementById('coll-result');
+  if (el) el.textContent = '검사 결과가 여기 표시됩니다.';
+};
+
+// 포즈 목록 (기존 포즈 — N-series 제외)
 function renderPoseList() {
   const area = document.getElementById('pose-list');
   area.innerHTML = '';
+  const entries = Object.entries(POSE_DB).filter(([id]) => !id.startsWith('N-'));
   const h = document.createElement('div');
   h.className = 'sec';
-  h.textContent = `포즈 데이터베이스 (${Object.keys(POSE_DB).length}개)`;
+  h.textContent = `포즈 데이터베이스 (${entries.length}개)`;
   area.appendChild(h);
 
-  Object.entries(POSE_DB).forEach(([id, angles]) => {
+  entries.forEach(([id, angles]) => {
     const div = document.createElement('div');
     div.className = 'pose-card';
     div.id = `pc-${id}`;
@@ -1234,6 +1939,195 @@ function renderPoseList() {
     area.appendChild(div);
   });
 }
+
+// 생성 포즈 목록
+function renderCustomPoseList() {
+  const area = document.getElementById('custom-list');
+  area.innerHTML = '';
+  const entries = Object.entries(CUSTOM_POSE_META);
+  if (!entries.length) {
+    const empty = document.createElement('div');
+    empty.className = 'sec';
+    empty.style.color = '#8a8';
+    empty.textContent = '생성된 포즈가 없습니다.';
+    area.appendChild(empty);
+    return;
+  }
+  const h = document.createElement('div');
+  h.className = 'sec';
+  h.textContent = `생성 포즈 (${entries.length}개)`;
+  area.appendChild(h);
+
+  entries.forEach(([id, meta]) => {
+    const angles = POSE_DB[id];
+    if (!angles) return;
+    const card = document.createElement('div');
+    card.className = 'custom-card';
+    card.id = `cc-${id}`;
+    const lLabel = meta.lMod || '—';
+    const rLabel = meta.rMod || '—';
+    card.innerHTML = `
+      <span class="custom-card-id">${id}</span>
+      <span class="custom-card-info">L:${lLabel} / R:${rLabel}</span>
+      <div class="custom-card-btns">
+        <button class="c-btn prev" onclick="previewPose('${id}')">미리</button>
+        <button class="c-btn edit" onclick="editCustomPose('${id}')">수정</button>
+        <button class="c-btn del"  onclick="deleteCustomPose('${id}')">삭제</button>
+      </div>
+    `;
+    area.appendChild(card);
+  });
+}
+
+window.deleteCustomPose = function(id) {
+  if (!confirm(`${id} 포즈를 삭제하시겠습니까?`)) return;
+  delete POSE_DB[id];
+  delete CUSTOM_POSE_META[id];
+  const idx = POSE_IDS.indexOf(id);
+  if (idx !== -1) POSE_IDS.splice(idx, 1);
+  reqPoses = reqPoses.filter(p => p !== id);
+  renderCustomPoseList();
+  renderTLRows();
+  renderReqPoses();
+  _updateReqPoseSelect();
+  setStatus(`${id} 삭제됨`);
+};
+
+window.editCustomPose = function(id) {
+  const meta = CUSTOM_POSE_META[id];
+  if (!meta) return;
+  editingNPoseId = id;
+  // 해당 포즈 각도 로드
+  const ang = POSE_DB[id];
+  if (ang) { Object.assign(q, ang); updateFK(ang); }
+  // 모듈 선택 복원
+  selectedLModule = meta.lMod || null;
+  selectedRModule = meta.rMod || null;
+  renderModulePanel();
+  if (selectedLModule) {
+    const lCard = document.getElementById(`mc-${selectedLModule}`);
+    if (lCard) { lCard.classList.add('selected'); lCard.scrollIntoView({ block:'nearest' }); }
+  }
+  if (selectedRModule) {
+    const rCard = document.getElementById(`mc-${selectedRModule}`);
+    if (rCard) { rCard.classList.add('selected'); rCard.scrollIntoView({ block:'nearest' }); }
+  }
+  _updateCompPanel();
+  document.getElementById('editing-indicator').textContent = `✎ ${id} 수정 중`;
+  setStatus(`${id} 수정 모드 — 모듈 변경 후 포즈 저장`);
+  switchTab('modules');
+};
+
+// 필수 포즈 관련
+function _updateReqPoseSelect() {
+  const grpBase   = document.getElementById('req-optgroup-base');
+  const grpCustom = document.getElementById('req-optgroup-custom');
+  if (!grpBase || !grpCustom) return;
+  const sel     = document.getElementById('req-pose-sel');
+  const current = sel ? sel.value : '';
+
+  grpBase.innerHTML   = '';
+  grpCustom.innerHTML = '';
+
+  POSE_IDS.filter(id => !id.startsWith('N-')).forEach(id => {
+    const opt = document.createElement('option');
+    opt.value = opt.textContent = id;
+    grpBase.appendChild(opt);
+  });
+  Object.keys(CUSTOM_POSE_META).forEach(id => {
+    const opt = document.createElement('option');
+    opt.value = opt.textContent = id;
+    grpCustom.appendChild(opt);
+  });
+
+  // optgroup이 비면 label만 남아 UX가 어색하므로 숨김 처리
+  grpBase.style.display   = grpBase.children.length   ? '' : 'none';
+  grpCustom.style.display = grpCustom.children.length ? '' : 'none';
+
+  if (sel && current) sel.value = current;
+}
+
+window.addReqPose = function() {
+  const sel = document.getElementById('req-pose-sel');
+  if (!sel || !sel.value) return;
+  if (!reqPoses.includes(sel.value)) {
+    reqPoses.push(sel.value);
+    renderReqPoses();
+  }
+};
+
+window.removeReqPose = function(idx) {
+  reqPoses.splice(idx, 1);
+  renderReqPoses();
+};
+
+function renderReqPoses() {
+  const wrap = document.getElementById('req-chips');
+  if (!wrap) return;
+  wrap.innerHTML = '';
+  reqPoses.forEach((pid, i) => {
+    const chip = document.createElement('div');
+    chip.className = 'req-chip';
+    chip.innerHTML = `${pid}<button class="req-chip-rm" onclick="removeReqPose(${i})">✕</button>`;
+    wrap.appendChild(chip);
+  });
+}
+
+// 타임라인 모드 전환
+window.setTLMode = function(mode) {
+  tlMode = mode;
+  document.getElementById('mode-btn-time').classList.toggle('active', mode === 'time');
+  document.getElementById('mode-btn-music').classList.toggle('active', mode === 'music');
+  document.getElementById('tl-time-inputs').style.display  = mode === 'time'  ? 'flex' : 'none';
+  document.getElementById('tl-music-inputs').style.display = mode === 'music' ? 'flex' : 'none';
+};
+
+function _applyMusicFile(file, onReady) {
+  if (musicBlobUrl) URL.revokeObjectURL(musicBlobUrl);
+  musicBlobUrl = URL.createObjectURL(file);
+  bgAudio.src = musicBlobUrl;
+  bgAudio.load();
+  bgAudio.addEventListener('loadedmetadata', function handler() {
+    bgAudio.removeEventListener('loadedmetadata', handler);
+    musicDuration = Math.round(bgAudio.duration);
+    if (onReady) onReady(file.name, musicDuration);
+  });
+}
+
+window.handleMusicFile = function(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  _applyMusicFile(file, (name, dur) => {
+    document.getElementById('gen-btn-music').style.display = 'block';
+    document.getElementById('gen-status').textContent = `✓ ${name} 로드됨 — ${dur}초`;
+    // 재생 목록 탭 상태도 동기화
+    const plStatus = document.getElementById('pl-music-status');
+    if (plStatus) plStatus.textContent = `${name} (${dur}s)`;
+    plStatus && (plStatus.style.color = '#6f6');
+  });
+};
+
+window.attachPlaylistMusic = function(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  _applyMusicFile(file, (name, dur) => {
+    const plStatus = document.getElementById('pl-music-status');
+    if (plStatus) { plStatus.textContent = `${name} (${dur}s)`; plStatus.style.color = '#6f6'; }
+    setStatus(`✓ 음악 연결됨 — ${name}`);
+  });
+};
+
+window.detachMusic = function() {
+  if (musicBlobUrl) { URL.revokeObjectURL(musicBlobUrl); musicBlobUrl = null; }
+  bgAudio.removeAttribute('src');
+  bgAudio.load();
+  musicDuration = 0;
+  const plStatus = document.getElementById('pl-music-status');
+  if (plStatus) { plStatus.textContent = '없음'; plStatus.style.color = ''; }
+  const genStatus = document.getElementById('gen-status');
+  if (genStatus) genStatus.textContent = '';
+  setStatus('음악 연결 해제됨');
+};
 
 // transition_id 칩
 function renderTIDChips(tids) {
@@ -1308,7 +2202,7 @@ window.previewPose = function(id) {
 
 // 탭 전환
 window.switchTab = function(tab) {
-  const tabs = ['poses','timeline','playlist'];
+  const tabs = ['poses','custom','timeline','playlist','modules'];
   document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', tabs[i]===tab));
   document.querySelectorAll('.tab-pane').forEach(p => p.classList.toggle('active', p.id===`tab-${tab}`));
 };
@@ -1347,8 +2241,14 @@ function animate() {
     let t = (performance.now() - startWall) / 1000;
     const d = totalDur();
     if (d > 0) {
-      if (isLooping) { t = t % d; }
-      else if (t >= d) { t = d; isPlaying = false; document.getElementById('btn-play').classList.remove('on'); }
+      if (isLooping) {
+        t = t % d;
+      } else if (t >= d) {
+        t = d;
+        isPlaying = false;
+        document.getElementById('btn-play').classList.remove('on');
+        _audioPause();
+      }
       pauseOffset = t;
       const ang = interpolate(t);
       Object.assign(q, ang);
@@ -1368,6 +2268,9 @@ window.addEventListener('resize', resizeRenderer);
 
 // 초기화
 renderPoseList();
+renderCustomPoseList();
+_updateReqPoseSelect();
+renderModulePanel();
 tlRows = [{ pose_id: 'P-001', duration: 0.5 }, { pose_id: 'P-002', duration: 0.5 }];
 renderTLRows();
 updateFK(q);
@@ -1498,6 +2401,24 @@ if (!localStorage.getItem('oax_guide_shown')) {
   setTimeout(showGuide, 800);
 }
 </script>
+
+<!-- JSON 가져오기 모달 -->
+<div id="import-modal-bg">
+  <div id="import-modal">
+    <h3>📋 JSON으로 포즈 시퀀스 가져오기</h3>
+    <p>아래 형식 중 하나를 붙여넣으세요.<br>
+      <code style="color:#4af">[{"pose_id":"P-001","duration":0.5}, ...]</code><br>
+      <code style="color:#4af">[{"time":0.0,"pose_id":"P-001"}, ...]</code><br>
+      <code style="color:#4af">["P-001","P-002", ...]</code>
+    </p>
+    <textarea id="import-textarea" placeholder='[{"pose_id":"P-001","duration":0.5},{"pose_id":"P-010","duration":0.6}]'></textarea>
+    <div id="import-err"></div>
+    <div class="import-actions">
+      <button id="import-cancel" onclick="hideImportModal()">취소</button>
+      <button id="import-confirm" onclick="confirmImport()">확인</button>
+    </div>
+  </div>
+</div>
 
 <!-- 온보딩 가이드 오버레이 -->
 <div id="guide-overlay">
