@@ -1463,9 +1463,9 @@ window.generateDance = function() {
 
   // 필수 포즈가 있으면 균등 분배로 삽입
   if (reqPoses.length) {
-    const step = Math.max(1, Math.floor(timeline.length / (reqPoses.length + 1)));
+    const stepSize = Math.max(1, Math.floor(timeline.length / (reqPoses.length + 1)));
     reqPoses.forEach((pid, i) => {
-      const idx = Math.min(step * (i + 1), timeline.length);
+      const idx = Math.min(stepSize * (i + 1), timeline.length);
       timeline.splice(idx, 0, { time: 0, pose_id: pid });
     });
   }
@@ -1476,9 +1476,27 @@ window.generateDance = function() {
       : 0.3;
     tlRows.push({ pose_id: timeline[i].pose_id, duration: Math.max(0.1, dur) });
   }
+
+  // 생성 포즈(N-series) 균등 삽입 — 앞 2행, 뒤 3행 제외하고 약 20% 확률로 끼워넣기
+  const nIds = Object.keys(CUSTOM_POSE_META);
+  if (nIds.length) {
+    const inserted = [];
+    for (let i = 2; i < tlRows.length - 3; i++) {
+      if (Math.random() < 0.20) {
+        inserted.push(i + inserted.length); // 삽입 후 인덱스 보정
+      }
+    }
+    inserted.forEach(idx => {
+      const pid = nIds[Math.floor(Math.random() * nIds.length)];
+      const dur = +(0.4 + Math.random() * 0.3).toFixed(1);
+      tlRows.splice(idx, 0, { pose_id: pid, duration: dur });
+    });
+  }
+
   renderTLRows();
+  const nNote  = nIds.length ? ` + 생성 포즈 ${nIds.length}종` : '';
   const reqNote = reqPoses.length ? ` (필수 ${reqPoses.length}개 포함)` : '';
-  statusEl.textContent = `✓ ${timeline.length}개 포즈 생성 완료${reqNote}. 수정 후 적용하세요.`;
+  statusEl.textContent = `✓ ${tlRows.length}개 포즈 생성 완료${nNote}${reqNote}. 수정 후 적용하세요.`;
 };
 
 // ════════════════════════════════════════════════════════════
@@ -1718,50 +1736,103 @@ function _runRealtimeCheck() {
   _showCollResult(risks, '실시간');
 }
 
+// 왼팔↔오른팔 각도 미러링
+function _mirrorAngles(a) {
+  return {
+    L1:a.R1||0, L2:a.R2||0, L3:a.R3||0, L4:a.R4||0, L5:a.R5||0, L6:a.R6||0, L7:a.R7||0,
+    R1:a.L1||0, R2:a.L2||0, R3:a.L3||0, R4:a.L4||0, R5:a.L5||0, R6:a.L6||0, R7:a.L7||0,
+  };
+}
+
+// N-포즈 번호 할당기
+function _nextNId() {
+  const nums = Object.keys(CUSTOM_POSE_META)
+    .map(k => parseInt(k.replace('N-', ''))).filter(n => !isNaN(n));
+  const next = nums.length ? Math.max(...nums) + 1 : 1;
+  return `N-${String(next).padStart(3, '0')}`;
+}
+
+// 대칭 모듈 ID 계산 (L-192 + R-174 → symL=L-174, symR=R-192)
+function _symMods(lMod, rMod) {
+  if (!lMod || !rMod) return null;
+  const lNum = lMod.replace('L-', '');
+  const rNum = rMod.replace('R-', '');
+  if (lNum === rNum) return null; // 이미 대칭 포즈
+  return { lMod: `L-${rNum}`, rMod: `R-${lNum}` };
+}
+
 window.saveComposite = function() {
   if (!selectedLModule && !selectedRModule) {
     alert('왼팔 또는 오른팔 모듈을 먼저 선택하세요.');
     return;
   }
 
-  if (editingNPoseId) {
-    // 기존 N-포즈 수정
-    const id = editingNPoseId;
-    POSE_DB[id] = {
-      L1:q.L1||0, L2:q.L2||0, L3:q.L3||0, L4:q.L4||0,
-      L5:q.L5||0, L6:q.L6||0, L7:q.L7||0,
-      R1:q.R1||0, R2:q.R2||0, R3:q.R3||0, R4:q.R4||0,
-      R5:q.R5||0, R6:q.R6||0, R7:q.R7||0,
-    };
-    CUSTOM_POSE_META[id] = { lMod: selectedLModule, rMod: selectedRModule };
-    editingNPoseId = null;
-    document.getElementById('editing-indicator').textContent = '';
-    renderCustomPoseList();
-    renderTLRows();
-    _updateReqPoseSelect();
-    setStatus(`✓ ${id} 수정됨`);
-    switchTab('custom');
-    return;
-  }
-
-  // 새 N-포즈 생성
-  const nums = Object.keys(CUSTOM_POSE_META)
-    .map(k => parseInt(k.replace('N-', '')))
-    .filter(n => !isNaN(n));
-  const nextNum = nums.length ? Math.max(...nums) + 1 : 1;
-  const newId = `N-${String(nextNum).padStart(3, '0')}`;
-  POSE_DB[newId] = {
+  const curAngles = {
     L1:q.L1||0, L2:q.L2||0, L3:q.L3||0, L4:q.L4||0,
     L5:q.L5||0, L6:q.L6||0, L7:q.L7||0,
     R1:q.R1||0, R2:q.R2||0, R3:q.R3||0, R4:q.R4||0,
     R5:q.R5||0, R6:q.R6||0, R7:q.R7||0,
   };
-  CUSTOM_POSE_META[newId] = { lMod: selectedLModule, rMod: selectedRModule };
+
+  if (editingNPoseId) {
+    // ── 수정 모드 ──
+    const id  = editingNPoseId;
+    const sym = CUSTOM_POSE_META[id] && CUSTOM_POSE_META[id].mirrorId;
+
+    POSE_DB[id] = curAngles;
+    CUSTOM_POSE_META[id] = {
+      lMod: selectedLModule, rMod: selectedRModule,
+      mirrorId: sym || undefined,
+    };
+
+    // 대칭 포즈도 함께 업데이트
+    if (sym && CUSTOM_POSE_META[sym]) {
+      const symMods = _symMods(selectedLModule, selectedRModule);
+      POSE_DB[sym] = _mirrorAngles(curAngles);
+      CUSTOM_POSE_META[sym] = {
+        lMod: symMods ? symMods.lMod : CUSTOM_POSE_META[sym].lMod,
+        rMod: symMods ? symMods.rMod : CUSTOM_POSE_META[sym].rMod,
+        mirrorId: id,
+      };
+    }
+
+    editingNPoseId = null;
+    document.getElementById('editing-indicator').textContent = '';
+    renderCustomPoseList();
+    renderTLRows();
+    _updateReqPoseSelect();
+    setStatus(sym ? `✓ ${id} + 대칭 ${sym} 수정됨` : `✓ ${id} 수정됨`);
+    switchTab('custom');
+    return;
+  }
+
+  // ── 신규 저장 ──
+  const newId  = _nextNId();
+  POSE_DB[newId]          = curAngles;
+
+  // 대칭 쌍 생성 (양팔 모두 선택되었고 번호가 다를 때)
+  const symMods = _symMods(selectedLModule, selectedRModule);
+  let symId = null;
+  if (symMods) {
+    // newId 등록 후 바로 다음 번호 예약
+    CUSTOM_POSE_META[newId] = { lMod: selectedLModule, rMod: selectedRModule }; // 임시
+    symId = _nextNId();
+    POSE_DB[symId]          = _mirrorAngles(curAngles);
+    CUSTOM_POSE_META[symId] = { lMod: symMods.lMod, rMod: symMods.rMod, mirrorId: newId };
+    POSE_IDS.push(symId);
+  }
+  // 원본에 mirrorId 반영
+  CUSTOM_POSE_META[newId] = {
+    lMod: selectedLModule, rMod: selectedRModule,
+    mirrorId: symId || undefined,
+  };
   POSE_IDS.push(newId);
+
   renderCustomPoseList();
   renderTLRows();
   _updateReqPoseSelect();
-  setStatus(`✓ ${newId} 생성 포즈에 추가됨`);
+  const symNote = symId ? ` + 대칭 ${symId} 자동 생성` : '';
+  setStatus(`✓ ${newId}${symNote}`);
   switchTab('custom');
   setTimeout(() => {
     const card = document.getElementById(`cc-${newId}`);
@@ -1964,10 +2035,13 @@ function renderCustomPoseList() {
     const card = document.createElement('div');
     card.className = 'custom-card';
     card.id = `cc-${id}`;
-    const lLabel = meta.lMod || '—';
-    const rLabel = meta.rMod || '—';
+    const lLabel  = meta.lMod || '—';
+    const rLabel  = meta.rMod || '—';
+    const symBadge = meta.mirrorId
+      ? `<span style="font-size:9px;color:#6f6;background:#0d1d0d;border:1px solid #2a5a2a;border-radius:3px;padding:1px 4px;margin-left:2px;">↔ ${meta.mirrorId}</span>`
+      : '';
     card.innerHTML = `
-      <span class="custom-card-id">${id}</span>
+      <span class="custom-card-id">${id}${symBadge}</span>
       <span class="custom-card-info">L:${lLabel} / R:${rLabel}</span>
       <div class="custom-card-btns">
         <button class="c-btn prev" onclick="previewPose('${id}')">미리</button>
@@ -1980,17 +2054,23 @@ function renderCustomPoseList() {
 }
 
 window.deleteCustomPose = function(id) {
-  if (!confirm(`${id} 포즈를 삭제하시겠습니까?`)) return;
-  delete POSE_DB[id];
-  delete CUSTOM_POSE_META[id];
-  const idx = POSE_IDS.indexOf(id);
-  if (idx !== -1) POSE_IDS.splice(idx, 1);
-  reqPoses = reqPoses.filter(p => p !== id);
+  const symId = CUSTOM_POSE_META[id] && CUSTOM_POSE_META[id].mirrorId;
+  const msg   = symId ? `${id} + 대칭 ${symId}를 삭제하시겠습니까?` : `${id} 포즈를 삭제하시겠습니까?`;
+  if (!confirm(msg)) return;
+
+  [id, symId].filter(Boolean).forEach(pid => {
+    delete POSE_DB[pid];
+    delete CUSTOM_POSE_META[pid];
+    const idx = POSE_IDS.indexOf(pid);
+    if (idx !== -1) POSE_IDS.splice(idx, 1);
+    reqPoses = reqPoses.filter(p => p !== pid);
+  });
+
   renderCustomPoseList();
   renderTLRows();
   renderReqPoses();
   _updateReqPoseSelect();
-  setStatus(`${id} 삭제됨`);
+  setStatus(symId ? `${id} + ${symId} 삭제됨` : `${id} 삭제됨`);
 };
 
 window.editCustomPose = function(id) {
@@ -2283,32 +2363,44 @@ const GUIDE_STEPS = [
   {
     target: null,
     icon: '🤖',
-    title: 'OpenArmX 시뮬레이터 오신 것을 환영합니다!',
-    desc: '처음 사용하시는 분을 위해\n간단한 사용법을 안내해 드릴게요.\n\n(언제든 건너뛰기 가능합니다)',
+    title: 'OpenArmX 시뮬레이터에 오신 것을 환영합니다!',
+    desc: '처음 사용하시는 분을 위해\n주요 기능을 간단히 안내해 드릴게요.\n\n(언제든 건너뛰기 가능합니다)',
+  },
+  {
+    target: () => document.querySelectorAll('.tab-btn')[0],
+    icon: '📚',
+    title: '① 기존 포즈',
+    desc: '[기존 포즈] 탭에는 202개의 사전 정의된\n포즈 데이터베이스가 있습니다.\n카드를 클릭하면 3D 뷰어에서\n즉시 미리보기 할 수 있어요.',
+  },
+  {
+    target: () => document.querySelectorAll('.tab-btn')[4],
+    icon: '🦾',
+    title: '② 모듈 조합',
+    desc: '[모듈 조합] 탭에서 왼팔·오른팔 모듈을\n각각 선택해 새로운 포즈를 만들 수 있어요.\n모듈 클릭 시 3D 뷰어에 즉시 반영되고\n충돌 여부를 실시간으로 확인할 수 있어요.',
   },
   {
     target: () => document.querySelectorAll('.tab-btn')[1],
-    icon: '📋',
-    title: '① 타임라인 입력 탭',
-    desc: '먼저 [타임라인 입력] 탭을 선택하세요.\n포즈와 재생 시간을 직접 편집하거나\n자동 생성을 활용할 수 있어요.',
+    icon: '✨',
+    title: '③ 생성 포즈',
+    desc: '모듈 조합 후 [포즈 저장]을 누르면\n[생성 포즈] 탭에 N-001부터 자동 저장됩니다.\n저장된 포즈는 수정·삭제가 가능하고\n타임라인 구성에서도 활용할 수 있어요.',
   },
   {
     target: () => document.getElementById('gen-btn'),
-    icon: '✨',
-    title: '② 생성하기',
-    desc: '[생성하기] 버튼을 누르면\n원하는 길이의 댄스 시퀀스가\n자동으로 만들어집니다.',
+    icon: '🎵',
+    title: '④ 타임라인 입력',
+    desc: '[타임라인] 탭에서 포즈 시퀀스를 구성해요.\n시간 기반 또는 음악 파일 업로드로\n길이를 자동 맞출 수 있고, 필수 포즈를\n지정하면 생성 시 반드시 포함됩니다.',
   },
   {
     target: () => document.querySelector('.apply-btn[onclick*="applyTimeline"]'),
     icon: '▶',
-    title: '③ 적용 & 재생',
-    desc: '[✓ 적용 & 재생] 버튼을 누르면\n시퀀스가 3D 뷰어에서 바로 재생됩니다.',
+    title: '⑤ 적용 & 재생',
+    desc: '[✓ 적용 & 재생]을 누르면\n3D 뷰어에서 시퀀스가 바로 재생됩니다.\n음악 파일을 연결했다면 싱크에 맞춰\n음악과 함께 재생됩니다.',
   },
   {
-    target: () => document.querySelectorAll('.tab-btn')[2],
+    target: () => document.querySelectorAll('.tab-btn')[3],
     icon: '📂',
-    title: '④ 재생 목록',
-    desc: '[재생 목록] 탭에서 저장된 시퀀스를\n확인하고 YAML 파일로 내보낼 수 있어요.\n\n이제 직접 사용해 보세요! 🎉',
+    title: '⑥ 재생 목록',
+    desc: '[재생 목록] 탭에서 키프레임을 확인하고\n나중에 음악 파일을 추가 연결할 수 있어요.\nYAML 파일로 내보내기도 가능합니다.\n\n이제 직접 사용해 보세요! 🎉',
   },
 ];
 
@@ -2374,8 +2466,11 @@ function _renderGuideStep(step) {
     _guidePos(el, card);
   });
 
-  if (step === 1) switchTab('timeline');
-  if (step === 4) switchTab('playlist');
+  if (step === 1) switchTab('poses');
+  if (step === 2) switchTab('modules');
+  if (step === 3) switchTab('custom');
+  if (step === 4) switchTab('timeline');
+  if (step === 6) switchTab('playlist');
 }
 
 function showGuide() {
