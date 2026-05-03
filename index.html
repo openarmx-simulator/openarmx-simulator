@@ -1249,25 +1249,60 @@ let tlRows = []; // [{pose_id, duration}]
 
 const POSE_IDS = Object.keys(POSE_DB); // P-001 ~ P-168
 
+// 옵션 HTML을 한 번만 빌드하고 캐시 (POSE_IDS 변경 시 무효화)
+let _tlOptsCache = null;
+function _getTLOptsHtml() {
+  if (!_tlOptsCache || _tlOptsCache.length !== POSE_IDS.length) {
+    _tlOptsCache = POSE_IDS.map(id => `<option value="${id}">${id}</option>`).join('');
+  }
+  return _tlOptsCache;
+}
+// 캐시 무효화
+function _invalidateTLCache() { _tlOptsCache = null; }
+
+// 기존 select들에 새 포즈 옵션만 추가 (전체 재빌드 없이)
+function _appendPoseOptToSelects(id) {
+  document.querySelectorAll('.tl-pose-sel').forEach(sel => {
+    if (!sel.querySelector(`option[value="${id}"]`)) {
+      const opt = document.createElement('option');
+      opt.value = opt.textContent = id;
+      sel.appendChild(opt);
+    }
+  });
+}
+// 삭제된 포즈 옵션 제거
+function _removePoseOptFromSelects(id) {
+  document.querySelectorAll('.tl-pose-sel').forEach(sel => {
+    if (sel.value === id) sel.value = POSE_IDS.find(p => !p.startsWith('N-')) || 'P-001';
+    sel.querySelector(`option[value="${id}"]`)?.remove();
+  });
+}
+
 function renderTLRows() {
   const container = document.getElementById('tl-rows');
-  container.innerHTML = '';
+  const frag = document.createDocumentFragment();
+  const optsHtml = _getTLOptsHtml(); // 전체 옵션 한 번만 빌드
+
   tlRows.forEach((row, i) => {
     const div = document.createElement('div');
     div.className = 'tl-row';
     div.innerHTML = `
       <span class="tl-handle">≡</span>
-      <select class="tl-pose-sel" onchange="tlRows[${i}].pose_id=this.value;updateTLTotal()">
-        ${POSE_IDS.map(id => `<option value="${id}"${id===row.pose_id?' selected':''}>${id}</option>`).join('')}
-      </select>
+      <select class="tl-pose-sel" onchange="tlRows[${i}].pose_id=this.value;updateTLTotal()">${optsHtml}</select>
       <input class="tl-dur-inp" type="number" min="0.1" max="30" step="0.1" value="${row.duration}"
         onchange="tlRows[${i}].duration=+parseFloat(this.value).toFixed(1);updateTLTotal()">
       <button class="tl-btn" onclick="moveTLRow(${i},-1)" title="위로">↑</button>
       <button class="tl-btn" onclick="moveTLRow(${i},1)"  title="아래로">↓</button>
       <button class="tl-btn" style="color:#a44;" onclick="delTLRow(${i})" title="삭제">✕</button>
     `;
-    container.appendChild(div);
+    // selected 설정은 JS로 (template 내 문자열 비교 불필요)
+    const sel = div.querySelector('.tl-pose-sel');
+    if (sel && POSE_IDS.includes(row.pose_id)) sel.value = row.pose_id;
+    frag.appendChild(div);
   });
+
+  container.innerHTML = '';
+  container.appendChild(frag);
   updateTLTotal();
 }
 
@@ -1310,19 +1345,46 @@ function tlRowsToKFs() {
 
 window.applyTimeline = function() {
   if (!tlRows.length) { alert('포즈를 추가하세요.'); return; }
-  const kfs = tlRowsToKFs();
-  allKeyframes = kfs;
-  const tids = ['1'];
-  selectedTID = '1';
-  renderTIDChips(tids);
-  renderKFList();
-  const d = totalDur();
-  scrubber.max = d;
-  stopAnim();
-  switchTab('playlist');
-  setStatus(`적용됨 — ${kfs.length}개 포즈, ${d.toFixed(1)}s`);
-  if (isLooping) { isLooping = false; document.getElementById('btn-loop').classList.remove('on'); }
-  playAnim();
+
+  const btn = document.querySelector('.apply-btn[onclick*="applyTimeline"]');
+
+  function _execute() {
+    const kfs = tlRowsToKFs();
+    allKeyframes = kfs;
+    const tids = ['1'];
+    selectedTID = '1';
+    renderTIDChips(tids);
+    renderKFList();
+    const d = totalDur();
+    scrubber.max = d;
+    stopAnim();
+    switchTab('playlist');
+    setStatus(`적용됨 — ${kfs.length}개 포즈, ${d.toFixed(1)}s`);
+    if (isLooping) { isLooping = false; document.getElementById('btn-loop').classList.remove('on'); }
+    if (btn) { btn.textContent = '✓ 적용 & 재생'; btn.disabled = false; btn.style.opacity = ''; }
+    playAnim();
+  }
+
+  // 음악이 연결돼 있고 아직 로딩 중이면 대기
+  if (musicBlobUrl && bgAudio.readyState < 3) {
+    if (btn) {
+      btn.textContent = '⏳ 음악 로딩 중...';
+      btn.disabled = true;
+      btn.style.opacity = '0.7';
+    }
+    setStatus('음악 파일 로딩 중...');
+    const onReady = () => { bgAudio.removeEventListener('canplaythrough', onReady); _execute(); };
+    bgAudio.addEventListener('canplaythrough', onReady);
+    // 5초 후 강제 진행 (느린 환경 대비)
+    setTimeout(() => {
+      if (btn && btn.disabled) {
+        bgAudio.removeEventListener('canplaythrough', onReady);
+        _execute();
+      }
+    }, 5000);
+  } else {
+    _execute();
+  }
 };
 
 // 하위 호환: 기존 applyJSON 유지 (내부용)
@@ -1799,7 +1861,7 @@ window.saveComposite = function() {
     editingNPoseId = null;
     document.getElementById('editing-indicator').textContent = '';
     renderCustomPoseList();
-    renderTLRows();
+    // 수정이므로 select 재빌드 불필요 (ID 변경 없음)
     _updateReqPoseSelect();
     setStatus(sym ? `✓ ${id} + 대칭 ${sym} 수정됨` : `✓ ${id} 수정됨`);
     switchTab('custom');
@@ -1827,9 +1889,11 @@ window.saveComposite = function() {
     mirrorId: symId || undefined,
   };
   POSE_IDS.push(newId);
+  _invalidateTLCache(); // 옵션 캐시 무효화
 
   renderCustomPoseList();
-  renderTLRows();
+  // 전체 재빌드 대신 새 옵션만 기존 select에 추가 (성능)
+  [newId, symId].filter(Boolean).forEach(_appendPoseOptToSelects);
   _updateReqPoseSelect();
   const symNote = symId ? ` + 대칭 ${symId} 자동 생성` : '';
   setStatus(`✓ ${newId}${symNote}`);
@@ -2064,10 +2128,11 @@ window.deleteCustomPose = function(id) {
     const idx = POSE_IDS.indexOf(pid);
     if (idx !== -1) POSE_IDS.splice(idx, 1);
     reqPoses = reqPoses.filter(p => p !== pid);
+    _removePoseOptFromSelects(pid); // 기존 select에서 해당 옵션만 제거
   });
+  _invalidateTLCache();
 
   renderCustomPoseList();
-  renderTLRows();
   renderReqPoses();
   _updateReqPoseSelect();
   setStatus(symId ? `${id} + ${symId} 삭제됨` : `${id} 삭제됨`);
