@@ -145,6 +145,17 @@
         </div>
         <div class="req-chips-wrap" id="req-chips"></div>
       </div>
+      <!-- 필수 동작 구 설정 -->
+      <div style="border-top:1px solid #181830;padding-top:6px;margin-top:2px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+          <span style="font-size:10px;color:#556;letter-spacing:1px;">필수 동작 (선택사항)</span>
+          <div style="display:flex;gap:4px;align-items:center;">
+            <select id="req-phrase-sel" style="background:#0a0a1e;color:#a78bfa;border:1px solid #3a1a6a;border-radius:3px;padding:2px 4px;font-size:10px;font-family:monospace;outline:none;max-width:130px;"></select>
+            <button class="exp-btn" style="padding:2px 8px;font-size:10px;" onclick="addReqPhrase()">+ 추가</button>
+          </div>
+        </div>
+        <div class="req-chips-wrap" id="req-phrase-chips"></div>
+      </div>
       <div id="gen-status" style="font-size:11px;color:#68a;min-height:14px;margin-top:4px;"></div>
     </div>
     <!-- 포즈 목록 헤더 -->

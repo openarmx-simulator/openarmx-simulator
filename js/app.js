@@ -58,10 +58,30 @@ const ARM_MODULE_DB = { left: CANON_MODULE_DB, right: CANON_MODULE_DB };
 const CUSTOM_POSE_META = {};   // { 'N-001': { lMod, rMod } }
 let editingNPoseId = null;     // 수정 중인 N-포즈 ID
 
-// 타임라인 모드 & 필수 포즈
+// ════════════════════════════════════════════════════════════
+//  동작 구 (Phrase) DB — PH-001 ~
+//  poses: 재생할 포즈 ID 배열 / dur: 포즈 1개당 재생 시간(초)
+// ════════════════════════════════════════════════════════════
+const PHRASE_DB = {
+  'PH-001': { name: '웨이브 순방향',    poses: ['P-161','P-162','P-163','P-164','P-165','P-166','P-167','P-168'], dur: 0.45 },
+  'PH-002': { name: '웨이브 역방향',    poses: ['P-168','P-167','P-166','P-165','P-164','P-163','P-162','P-161'], dur: 0.45 },
+  'PH-003': { name: '만세 올리기',      poses: ['P-435','P-437','P-439','P-441','P-444','P-453','P-458','P-466'], dur: 0.4  },
+  'PH-004': { name: '만세 내리기',      poses: ['P-466','P-458','P-453','P-444','P-441','P-439','P-437','P-435'], dur: 0.4  },
+  'PH-005': { name: '리듬 바운스',      poses: ['P-041','P-043','P-045','P-047','P-049','P-047','P-045','P-043'], dur: 0.35 },
+  'PH-006': { name: 'K-pop 리듬',       poses: ['P-079','P-081','P-083','P-085','P-083','P-081','P-079'], dur: 0.4  },
+  'PH-007': { name: '사이드 스웨이',    poses: ['P-071','P-073','P-075','P-077','P-078','P-077','P-075','P-073'], dur: 0.45 },
+  'PH-008': { name: '컷 히트',          poses: ['P-089','P-091','P-093','P-095','P-098','P-095','P-093','P-089'], dur: 0.35 },
+  'PH-009': { name: '인워드 스윙',      poses: ['P-113','P-115','P-117','P-119','P-117','P-115','P-113'], dur: 0.4  },
+  'PH-010': { name: '와이드 스트레치',  poses: ['P-145','P-147','P-149','P-151','P-152','P-151','P-149','P-145'], dur: 0.5  },
+  'PH-011': { name: '팔 점진 올리기',   poses: ['P-003','P-004','P-005','P-006','P-007'], dur: 0.5  },
+  'PH-012': { name: '팔 점진 내리기',   poses: ['P-007','P-006','P-005','P-004','P-003','P-002'], dur: 0.5  },
+};
+
+// 타임라인 모드 & 필수 포즈/동작
 let tlMode = 'time';           // 'time' | 'music'
 let musicDuration = 0;
 let reqPoses = [];             // [poseId, ...]
+let reqPhrases = [];           // [phraseId, ...]
 
 // 모듈 선택 상태
 let selectedLModule = null;
@@ -709,6 +729,25 @@ function renderTLRows() {
     cumSec = +(cumSec + row.duration).toFixed(1);
 
     const div = document.createElement('div');
+
+    // ── 동작 구(phrase) 행 ──────────────────────────────────
+    if (row._type === 'phrase') {
+      div.className = 'tl-row tl-row-phrase';
+      div.innerHTML = `
+        <span class="tl-handle" title="드래그로 순서 변경">⠿</span>
+        <span class="tl-phrase-icon">🎬</span>
+        <span class="tl-phrase-name">${row.name}</span>
+        <span class="tl-cum" title="포즈 수">${row.poses.length}포즈</span>
+        <span class="tl-cum" title="시작 시각">${startSec.toFixed(1)}s</span>
+        <button class="tl-btn" style="color:#a44;" onclick="delTLRow(${i})" title="삭제">✕</button>
+      `;
+      div.addEventListener('click', e => {
+        if (e.target.closest('button,span.tl-handle')) return;
+        previewTLRow(i);
+      });
+
+    // ── 일반 포즈 행 ─────────────────────────────────────────
+    } else {
     div.className = 'tl-row';
     div.innerHTML = `
       <span class="tl-handle" title="드래그로 순서 변경">⠿</span>
@@ -724,6 +763,7 @@ function renderTLRows() {
       if (e.target.closest('select,input,button,span.tl-handle')) return;
       previewTLRow(i);
     });
+    } // end else
 
     // ── 드래그&드롭 순서 변경 ──
     const handle = div.querySelector('.tl-handle');
@@ -800,20 +840,34 @@ function renderTLVisBar() {
 
   let trackHtml = '';
   let cumSec = 0;
+  const _PH_COLORS = ['#4a1a80','#5a2090','#3d1570','#521e8a'];
   tlRows.forEach((row, i) => {
     const startSec = cumSec;
     cumSec = +(cumSec + row.duration).toFixed(2);
     const widthPct = (row.duration / total) * 100;
-    const isN = row.pose_id.startsWith('N-');
-    const bg = isN ? _N_COLORS[i % _N_COLORS.length] : _P_COLORS[i % _P_COLORS.length];
-    const showId  = widthPct > 4;
-    const showDur = widthPct > 8;
-    trackHtml += `<div class="tl-seg" style="width:${widthPct.toFixed(3)}%;background:${bg};"
-      data-idx="${i}" onclick="previewTLRow(${i})"
-      title="${row.pose_id}  ·  ${row.duration}s  @  ${startSec.toFixed(1)}s">
-      ${showId  ? `<span class="tl-seg-id">${row.pose_id}</span>` : ''}
-      ${showDur ? `<span class="tl-seg-dur">${row.duration}s</span>` : ''}
-    </div>`;
+
+    if (row._type === 'phrase') {
+      // ── 동작 구 세그먼트 ──
+      const bg = _PH_COLORS[i % _PH_COLORS.length];
+      const showLabel = widthPct > 5;
+      trackHtml += `<div class="tl-seg tl-seg-phrase" style="width:${widthPct.toFixed(3)}%;background:${bg};"
+        data-idx="${i}" onclick="previewTLRow(${i})"
+        title="🎬 ${row.name}  ·  ${row.poses.length}포즈  ·  ${row.duration.toFixed(1)}s  @  ${startSec.toFixed(1)}s">
+        ${showLabel ? `<span class="tl-seg-id">🎬 ${row.name}</span>` : ''}
+      </div>`;
+    } else {
+      // ── 일반 포즈 세그먼트 ──
+      const isN = row.pose_id.startsWith('N-');
+      const bg = isN ? _N_COLORS[i % _N_COLORS.length] : _P_COLORS[i % _P_COLORS.length];
+      const showId  = widthPct > 4;
+      const showDur = widthPct > 8;
+      trackHtml += `<div class="tl-seg" style="width:${widthPct.toFixed(3)}%;background:${bg};"
+        data-idx="${i}" onclick="previewTLRow(${i})"
+        title="${row.pose_id}  ·  ${row.duration}s  @  ${startSec.toFixed(1)}s">
+        ${showId  ? `<span class="tl-seg-id">${row.pose_id}</span>` : ''}
+        ${showDur ? `<span class="tl-seg-dur">${row.duration}s</span>` : ''}
+      </div>`;
+    }
   });
 
   trackHtml += '<div id="tl-playhead" style="left:0%"></div>';
@@ -843,7 +897,9 @@ function _updateTLPlayhead(t, d) {
 window.previewTLRow = function(i) {
   const row = tlRows[i];
   if (!row) return;
-  previewPose(row.pose_id);
+  // 구 블록이면 첫 번째 포즈 미리보기
+  const pid = row._type === 'phrase' ? row.poses[0] : row.pose_id;
+  previewPose(pid);
   // 비주얼 바 하이라이트
   document.querySelectorAll('.tl-seg').forEach((s, j) =>
     s.classList.toggle('seg-active', j === i));
@@ -853,9 +909,11 @@ window.previewTLRow = function(i) {
 };
 
 function updateTLTotal() {
-  const total = tlRows.reduce((s, r) => s + r.duration, 0);
+  const totalPoses = tlRows.reduce((s, r) => s + (r._type === 'phrase' ? r.poses.length : 1), 0);
+  const totalSec   = tlRows.reduce((s, r) => s + r.duration, 0);
+  const phCount    = tlRows.filter(r => r._type === 'phrase').length;
   const el = document.getElementById('tl-total');
-  if (el) el.textContent = `총 ${tlRows.length}개 포즈 · ${total.toFixed(1)}초`;
+  if (el) el.textContent = `총 ${totalPoses}개 포즈${phCount ? ` (구 ${phCount}개 포함)` : ''} · ${totalSec.toFixed(1)}초`;
 }
 
 window.addTLRow = function(poseId = 'P-001', duration = 0.5) {
@@ -882,18 +940,31 @@ window.clearTL = function() {
 
 function tlRowsToKFs() {
   let t = 0;
-  return tlRows.map(row => {
-    const kf = { time: +t.toFixed(1), pose_id: row.pose_id, transition_id: '1' };
-    t = +(t + row.duration).toFixed(1);
-    return kf;
+  const kfs = [];
+  tlRows.forEach(row => {
+    if (row._type === 'phrase') {
+      // 구 블록 → 내부 포즈 시퀀스로 전개
+      row.poses.forEach(pid => {
+        kfs.push({ time: +t.toFixed(1), pose_id: pid, transition_id: '1' });
+        t = +(t + row.dur).toFixed(1);
+      });
+    } else {
+      kfs.push({ time: +t.toFixed(1), pose_id: row.pose_id, transition_id: '1' });
+      t = +(t + row.duration).toFixed(1);
+    }
   });
+  return kfs;
 }
 
 window.applyTimeline = function() {
   if (!tlRows.length) { alert('포즈를 추가하세요.'); return; }
 
-  // ── 포즈 존재 여부 사전 검증 (N-포즈 포함) ──
-  const missingPoses = tlRows.filter(r => !POSE_DB[r.pose_id]).map(r => r.pose_id);
+  // ── 포즈 존재 여부 사전 검증 (N-포즈 + 구 블록 내부 포즈 포함) ──
+  const missingPoses = tlRows.flatMap(r =>
+    r._type === 'phrase'
+      ? r.poses.filter(pid => !POSE_DB[pid])
+      : (!POSE_DB[r.pose_id] ? [r.pose_id] : [])
+  );
   if (missingPoses.length) {
     const names = [...new Set(missingPoses)].join(', ');
     alert(`아래 포즈가 POSE_DB에 없습니다. 타임라인에서 제거하거나 다시 생성하세요.\n\n${names}`);
@@ -1096,12 +1167,27 @@ window.generateDance = function() {
     tlRows.push({ pose_id: timeline[i].pose_id, duration: Math.max(0.1, Math.min(0.8, dur)) });
   }
 
-  // ── Step 2: 필수 포즈(reqPoses) 삽입 — tlRows 레벨 (time:0 버그 방지)
+  // ── Step 2: 필수 포즈(reqPoses) 삽입
   if (reqPoses.length) {
     const step = Math.max(2, Math.floor(tlRows.length / (reqPoses.length + 1)));
     reqPoses.forEach((pid, i) => {
       const idx = Math.min(step * (i + 1) + i, tlRows.length - 2);
       tlRows.splice(idx, 0, { pose_id: pid, duration: 0.5 });
+    });
+  }
+
+  // ── Step 2.5: 필수 동작 구(reqPhrases) 삽입 ──
+  if (reqPhrases.length) {
+    const step = Math.max(4, Math.floor(tlRows.length / (reqPhrases.length + 1)));
+    reqPhrases.forEach((phId, i) => {
+      const ph = PHRASE_DB[phId];
+      if (!ph) return;
+      const totalDur = +(ph.poses.length * ph.dur).toFixed(1);
+      const idx = Math.min(step * (i + 1) + i, tlRows.length - 3);
+      tlRows.splice(idx, 0, {
+        _type: 'phrase', phrase_id: phId, name: ph.name,
+        poses: ph.poses, dur: ph.dur, duration: totalDur
+      });
     });
   }
 
@@ -1119,19 +1205,19 @@ window.generateDance = function() {
   }
 
   // ── Step 4: 총 길이를 목표 duration 초에 정확히 맞추기 ──
-  // 모든 삽입이 끝난 뒤 한 번에 중간 행을 균등 조정한다.
-  // 첫 2행(인트로)·마지막 3행(복귀)은 건드리지 않는다.
+  // 구 블록(phrase)은 고정 길이라 제외, 일반 포즈 행만 조정
   (function normaliseDuration() {
     const GUARD_HEAD = 2;
     const GUARD_TAIL = 3;
-    const mid = tlRows.slice(GUARD_HEAD, tlRows.length - GUARD_TAIL);
+    // phrase 행은 포즈 단위가 정해져 있어 duration 변경 불가 → 제외
+    const mid = tlRows.slice(GUARD_HEAD, tlRows.length - GUARD_TAIL)
+                      .filter(r => r._type !== 'phrase');
     if (!mid.length) return;
 
     let surplus = +(tlRows.reduce((s, r) => s + r.duration, 0) - duration).toFixed(2);
 
     for (let pass = 0; pass < 3 && Math.abs(surplus) > 0.05; pass++) {
       if (surplus > 0) {
-        // 초과분 → 중간 행에서 균등 차감 (하한 0.1 s)
         for (let i = 0; i < mid.length && surplus > 0.01; i++) {
           const cut = Math.min(
             +((surplus / (mid.length - i)).toFixed(2)),
@@ -1143,7 +1229,6 @@ window.generateDance = function() {
           }
         }
       } else {
-        // 부족분 → 중간 행에 균등 추가 (상한 0.8 s)
         for (let i = 0; i < mid.length && surplus < -0.01; i++) {
           const add = Math.min(
             +((-surplus) / (mid.length - i)).toFixed(2),
@@ -1159,9 +1244,10 @@ window.generateDance = function() {
   })();
 
   renderTLRows();
-  const nNote  = nIds.length ? ` + 생성 포즈 ${nIds.length}종` : '';
-  const reqNote = reqPoses.length ? ` (필수 ${reqPoses.length}개 포함)` : '';
-  statusEl.textContent = `✓ ${tlRows.length}개 포즈 생성 완료${nNote}${reqNote}. 수정 후 적용하세요.`;
+  const nNote      = nIds.length       ? ` + 생성 포즈 ${nIds.length}종`      : '';
+  const reqNote    = reqPoses.length   ? ` · 필수 포즈 ${reqPoses.length}개`   : '';
+  const phraseNote = reqPhrases.length ? ` · 필수 동작 ${reqPhrases.length}개` : '';
+  statusEl.textContent = `✓ ${tlRows.length}개 블록 생성 완료${nNote}${reqNote}${phraseNote}. 수정 후 적용하세요.`;
   _setApplyBtnActive(true);
 };
 
@@ -1864,6 +1950,48 @@ function renderReqPoses() {
     wrap.appendChild(chip);
   });
 }
+
+// ── 필수 동작 구 (reqPhrases) ────────────────────────────────
+window.addReqPhrase = function() {
+  const sel = document.getElementById('req-phrase-sel');
+  if (!sel || !sel.value) return;
+  if (!reqPhrases.includes(sel.value)) {
+    reqPhrases.push(sel.value);
+    renderReqPhraseChips();
+  }
+};
+
+window.removeReqPhrase = function(idx) {
+  reqPhrases.splice(idx, 1);
+  renderReqPhraseChips();
+};
+
+function renderReqPhraseChips() {
+  const wrap = document.getElementById('req-phrase-chips');
+  if (!wrap) return;
+  wrap.innerHTML = '';
+  reqPhrases.forEach((phId, i) => {
+    const ph = PHRASE_DB[phId];
+    const chip = document.createElement('div');
+    chip.className = 'req-chip';
+    chip.style.background = '#2a1050';
+    chip.style.borderColor = '#5a2090';
+    chip.innerHTML = `🎬 ${ph ? ph.name : phId}<button class="req-chip-rm" onclick="removeReqPhrase(${i})">✕</button>`;
+    wrap.appendChild(chip);
+  });
+}
+
+// phrase select 옵션 채우기 (초기화 시 1회 실행)
+(function _initPhraseSelect() {
+  const sel = document.getElementById('req-phrase-sel');
+  if (!sel) return;
+  Object.entries(PHRASE_DB).forEach(([id, ph]) => {
+    const opt = document.createElement('option');
+    opt.value = id;
+    opt.textContent = `${id} ${ph.name}`;
+    sel.appendChild(opt);
+  });
+})();
 
 // 타임라인 모드 전환
 window.setTLMode = function(mode) {

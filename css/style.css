@@ -528,3 +528,19 @@ body {
   border-color:#4a90e2 !important;
   background:#0e1a2e !important;
 }
+
+/* 동작 구(phrase) 편집 행 */
+.tl-row-phrase {
+  background:#120830 !important;
+  border-color:#4a1a80 !important;
+}
+.tl-row-phrase:hover { border-color:#7a3aaa !important; }
+.tl-phrase-icon { font-size:13px; flex-shrink:0; }
+.tl-phrase-name {
+  flex:1; font-size:11px; font-weight:700;
+  color:#c4a0ff; white-space:nowrap;
+  overflow:hidden; text-overflow:ellipsis;
+}
+
+/* 동작 구 타임라인 바 세그먼트 */
+.tl-seg-phrase { border-right:2px solid rgba(160,100,255,0.4) !important; }
