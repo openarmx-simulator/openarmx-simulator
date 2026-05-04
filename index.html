@@ -216,7 +216,7 @@ body {
 
   /* 타임라인 행 */
   .tl-row {
-    grid-template-columns: 13px 1fr 46px 38px 22px 22px 22px;
+    grid-template-columns: 16px 1fr 46px 38px 22px;
     padding:5px 5px;
   }
   .tl-pose-sel { font-size:12px; padding:4px 3px; }
@@ -420,14 +420,17 @@ body {
 /* ── 타임라인 행 에디터 ── */
 .tl-row {
   display:grid;
-  grid-template-columns: 13px 1fr 48px 40px 20px 20px 20px;
+  grid-template-columns: 16px 1fr 48px 40px 20px;
   align-items:center; gap:3px;
   padding:3px 5px; margin-bottom:3px;
   background:#111125; border:1px solid #1c1c35;
   border-radius:5px; font-size:12px;
 }
 .tl-row:hover { border-color:#2a2a55; }
-.tl-handle { color:#334; cursor:grab; text-align:center; font-size:13px; user-select:none; }
+.tl-row.dragging { opacity:0.35; border-style:dashed; }
+.tl-row.drag-over { border-color:#4a90e2 !important; border-top:2px solid #4a90e2 !important; }
+.tl-handle { color:#446; cursor:grab; text-align:center; font-size:14px; user-select:none; padding:0 1px; }
+.tl-handle:active { cursor:grabbing; }
 .tl-pose-sel {
   background:#0a0a1e; color:#4a90e2; border:1px solid #222240;
   border-radius:3px; padding:2px 3px; font-size:11px; font-family:monospace;
@@ -697,7 +700,7 @@ body {
     </div>
     <!-- 적용 & 재생 버튼 — 바로 아래 배치 -->
     <div style="padding:8px 12px;border-bottom:1px solid #181830;flex-shrink:0;">
-      <button class="apply-btn" style="margin:0;" onclick="applyTimeline()">✓ 적용 &amp; 재생</button>
+      <button class="apply-btn" id="tl-apply-btn" style="margin:0;" onclick="applyTimeline()">✓ 적용 &amp; 재생</button>
     </div>
     <!-- 포즈 편집 목록 (스크롤) -->
     <div id="tl-rows" class="scroll" style="flex:1;padding:8px;"></div>
@@ -1646,6 +1649,16 @@ window.stopRec = function() {
 // ════════════════════════════════════════════════════════════
 // ── 타임라인 행 에디터 데이터 ──
 let tlRows = []; // [{pose_id, duration}]
+let _dragIdx = null; // 드래그 중인 행 인덱스
+
+// 적용 버튼 활성/비활성
+function _setApplyBtnActive(active) {
+  const btn = document.getElementById('tl-apply-btn');
+  if (!btn) return;
+  btn.disabled = !active;
+  btn.style.opacity = active ? '' : '0.38';
+  btn.title = active ? '' : '생성하기 또는 음악 파일을 추가하면 활성화됩니다';
+}
 
 const POSE_IDS = Object.keys(POSE_DB); // P-001 ~ P-168
 
@@ -1693,20 +1706,53 @@ function renderTLRows() {
     const div = document.createElement('div');
     div.className = 'tl-row';
     div.innerHTML = `
-      <span class="tl-handle">≡</span>
+      <span class="tl-handle" title="드래그로 순서 변경">⠿</span>
       <select class="tl-pose-sel" onchange="tlRows[${i}].pose_id=this.value;updateTLTotal();renderTLVisBar()">${optsHtml}</select>
       <input class="tl-dur-inp" type="number" min="0.1" max="30" step="0.1" value="${row.duration}"
         onchange="tlRows[${i}].duration=+parseFloat(this.value).toFixed(1);renderTLRows()">
       <span class="tl-cum" title="시작 시각">${startSec.toFixed(1)}s</span>
-      <button class="tl-btn" onclick="moveTLRow(${i},-1)" title="위로">↑</button>
-      <button class="tl-btn" onclick="moveTLRow(${i},1)"  title="아래로">↓</button>
       <button class="tl-btn" style="color:#a44;" onclick="delTLRow(${i})" title="삭제">✕</button>
     `;
+
     // 행 클릭 → 포즈 미리보기 (컨트롤 클릭 제외)
     div.addEventListener('click', e => {
-      if (e.target.closest('select,input,button')) return;
+      if (e.target.closest('select,input,button,span.tl-handle')) return;
       previewTLRow(i);
     });
+
+    // ── 드래그&드롭 순서 변경 ──
+    const handle = div.querySelector('.tl-handle');
+    handle.draggable = true;
+
+    handle.addEventListener('dragstart', e => {
+      _dragIdx = i;
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', String(i));
+      setTimeout(() => div.classList.add('dragging'), 0);
+    });
+    handle.addEventListener('dragend', () => {
+      div.classList.remove('dragging');
+      document.querySelectorAll('.tl-row').forEach(r => r.classList.remove('drag-over'));
+      _dragIdx = null;
+    });
+    div.addEventListener('dragover', e => {
+      if (_dragIdx === null || _dragIdx === i) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      document.querySelectorAll('.tl-row').forEach(r => r.classList.remove('drag-over'));
+      div.classList.add('drag-over');
+    });
+    div.addEventListener('dragleave', () => div.classList.remove('drag-over'));
+    div.addEventListener('drop', e => {
+      e.preventDefault();
+      div.classList.remove('drag-over');
+      if (_dragIdx === null || _dragIdx === i) return;
+      const moved = tlRows.splice(_dragIdx, 1)[0];
+      tlRows.splice(i, 0, moved);
+      _dragIdx = null;
+      renderTLRows();
+    });
+
     const sel = div.querySelector('.tl-pose-sel');
     if (sel && POSE_IDS.includes(row.pose_id)) sel.value = row.pose_id;
     frag.appendChild(div);
@@ -1862,10 +1908,11 @@ window.applyTimeline = function() {
     const d = _playDur;       // ← 이미 계산됨
     scrubber.max = d;
     stopAnim();
-    switchTab('playlist');
+    switchTab('timeline');
     setStatus(`적용됨 — ${kfs.length}개 포즈, ${d.toFixed(1)}s`);
-    if (isLooping) { isLooping = false; document.getElementById('btn-loop').classList.remove('on'); }
+    if (isLooping) { isLooping = false; _syncPlayBtns(); }
     if (btn) { btn.textContent = '✓ 적용 & 재생'; btn.disabled = false; btn.style.opacity = ''; }
+    _setApplyBtnActive(false);
     playAnim();
   }
 
@@ -2101,6 +2148,7 @@ window.generateDance = function() {
   const nNote  = nIds.length ? ` + 생성 포즈 ${nIds.length}종` : '';
   const reqNote = reqPoses.length ? ` (필수 ${reqPoses.length}개 포함)` : '';
   statusEl.textContent = `✓ ${tlRows.length}개 포즈 생성 완료${nNote}${reqNote}. 수정 후 적용하세요.`;
+  _setApplyBtnActive(true);
 };
 
 // ════════════════════════════════════════════════════════════
@@ -2826,10 +2874,9 @@ window.handleMusicFile = function(input) {
   _applyMusicFile(file, (name, dur) => {
     document.getElementById('gen-btn-music').style.display = 'block';
     document.getElementById('gen-status').textContent = `✓ ${name} 로드됨 — ${dur}초`;
-    // 재생 목록 탭 상태도 동기화
     const plStatus = document.getElementById('pl-music-status');
-    if (plStatus) plStatus.textContent = `${name} (${dur}s)`;
-    plStatus && (plStatus.style.color = '#6f6');
+    if (plStatus) { plStatus.textContent = `${name} (${dur}s)`; plStatus.style.color = '#6f6'; }
+    _setApplyBtnActive(true);
   });
 };
 
@@ -2840,6 +2887,7 @@ window.attachPlaylistMusic = function(input) {
     const plStatus = document.getElementById('pl-music-status');
     if (plStatus) { plStatus.textContent = `${name} (${dur}s)`; plStatus.style.color = '#6f6'; }
     setStatus(`✓ 음악 연결됨 — ${name}`);
+    _setApplyBtnActive(true);
   });
 };
 
