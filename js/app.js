@@ -158,7 +158,8 @@ let selectedTID  = null;   // 선택된 transition_id
 
 // ── 재생 전용 캐시 (animate 루프에서 매 프레임 filter+sort 제거) ──
 let _playTimeline = [];   // 현재 선택된 TID의 정렬된 키프레임 배열
-let _playDur      = 0;    // 마지막 keyframe의 time (= 총 재생 길이)
+let _playDur      = 0;    // 총 재생 길이 (시각 바 total과 일치)
+let _tlTotalDur   = 0;    // applyTimeline 시 tlRows.duration 합산값 (시각 바 기준)
 
 /** activeTimeline()을 캐시에 반영 — applyTimeline / TID 변경 시 1회만 호출 */
 function _rebuildPlayTimeline() {
@@ -166,7 +167,8 @@ function _rebuildPlayTimeline() {
   _playTimeline = allKeyframes
     .filter(k => k.transition_id === selectedTID)
     .sort((a, b) => a.time - b.time);
-  _playDur = _playTimeline.length ? _playTimeline[_playTimeline.length - 1].time : 0;
+  // _tlTotalDur가 있으면 시각 바와 동기화, 없으면 마지막 KF 시각 사용
+  _playDur = _tlTotalDur || (_playTimeline.length ? _playTimeline[_playTimeline.length - 1].time : 0);
 }
 
 function activeTimeline() {
@@ -936,6 +938,7 @@ window.moveTLRow = function(i, dir) {
 
 window.clearTL = function() {
   tlRows = [];
+  _tlTotalDur = 0;
   renderTLRows();
 };
 
@@ -944,14 +947,17 @@ function tlRowsToKFs() {
   const kfs = [];
   tlRows.forEach(row => {
     if (row._type === 'phrase') {
-      // 구 블록 → 내부 포즈 시퀀스로 전개
-      row.poses.forEach(pid => {
-        kfs.push({ time: +t.toFixed(1), pose_id: pid, transition_id: '1' });
-        t = +(t + row.dur).toFixed(1);
+      // 구 블록: 반올림 누적 오차 방지 → phraseStart 기준 절대 계산
+      const phraseStart = t;
+      row.poses.forEach((pid, j) => {
+        const kfTime = +(phraseStart + j * row.dur).toFixed(2);
+        kfs.push({ time: kfTime, pose_id: pid, transition_id: '1' });
       });
+      // t는 row.duration만큼 정확히 전진 (누적 오차 없음)
+      t = +(phraseStart + row.duration).toFixed(2);
     } else {
-      kfs.push({ time: +t.toFixed(1), pose_id: row.pose_id, transition_id: '1' });
-      t = +(t + row.duration).toFixed(1);
+      kfs.push({ time: +t.toFixed(2), pose_id: row.pose_id, transition_id: '1' });
+      t = +(t + row.duration).toFixed(2);
     }
   });
   return kfs;
@@ -979,10 +985,12 @@ window.applyTimeline = function() {
     allKeyframes = kfs;
     const tids = ['1'];
     selectedTID = '1';
-    _rebuildPlayTimeline();   // ← 캐시 빌드 (animate 루프용)
+    // tlRows duration 합산 → 시각 바와 재생 길이 동기화
+    _tlTotalDur = +tlRows.reduce((s, r) => s + r.duration, 0).toFixed(2);
+    _rebuildPlayTimeline();   // ← _tlTotalDur 기반으로 _playDur 설정
     renderTIDChips(tids);
     renderKFList();
-    const d = _playDur;       // ← 이미 계산됨
+    const d = _playDur;       // ← tlRows 합산과 동일
     scrubber.max = d;
     stopAnim();
     switchTab('timeline');
