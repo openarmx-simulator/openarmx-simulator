@@ -1836,37 +1836,53 @@ window.generateDance = function() {
   // JSON → 행 에디터로 변환
   tlRows = [];
 
-  // 필수 포즈가 있으면 균등 분배로 삽입
-  if (reqPoses.length) {
-    const stepSize = Math.max(1, Math.floor(timeline.length / (reqPoses.length + 1)));
-    reqPoses.forEach((pid, i) => {
-      const idx = Math.min(stepSize * (i + 1), timeline.length);
-      timeline.splice(idx, 0, { time: 0, pose_id: pid });
-    });
-  }
-
+  // ── Step 1: 기본 타임라인 → tlRows (time 기반 duration 계산)
+  // reqPoses를 timeline에 time:0으로 splice하면 dur = next_time - 0 = next_time 이 되어
+  // 수 초짜리 홀드가 생기는 버그가 있으므로, 이 단계에선 기본 시퀀스만 변환한다.
   for (let i = 0; i < timeline.length; i++) {
     const dur = i < timeline.length - 1
       ? +((timeline[i+1].time - timeline[i].time).toFixed(1))
       : 0.3;
-    tlRows.push({ pose_id: timeline[i].pose_id, duration: Math.max(0.1, dur) });
+    // 단일 포즈 최대 0.8 초 상한 적용
+    tlRows.push({ pose_id: timeline[i].pose_id, duration: Math.max(0.1, Math.min(0.8, dur)) });
   }
 
-  // 생성 포즈(N-series) 균등 삽입 — 앞 2행, 뒤 3행 제외하고 약 20% 확률로 끼워넣기
-  const nIds = Object.keys(CUSTOM_POSE_META);
-  if (nIds.length) {
-    const inserted = [];
-    for (let i = 2; i < tlRows.length - 3; i++) {
-      if (Math.random() < 0.20) {
-        inserted.push(i + inserted.length); // 삽입 후 인덱스 보정
+  // ── Step 2: 필수 포즈(reqPoses) → tlRows 레벨에서 삽입
+  // 이전 행의 시간을 분할해 전체 총 길이가 늘어나지 않도록 한다.
+  if (reqPoses.length) {
+    const step = Math.max(2, Math.floor(tlRows.length / (reqPoses.length + 1)));
+    reqPoses.forEach((pid, i) => {
+      const idx = Math.min(step * (i + 1) + i, tlRows.length - 2);
+      const reqDur = +(0.4 + Math.random() * 0.2).toFixed(1); // 0.4~0.6 s
+      // 앞 행에서 시간을 빌려 총 길이를 유지
+      if (idx > 0 && tlRows[idx - 1].duration > reqDur + 0.15) {
+        tlRows[idx - 1].duration = Math.max(0.1, +(tlRows[idx - 1].duration - reqDur).toFixed(1));
       }
-    }
-    inserted.forEach(idx => {
-      const pid = nIds[Math.floor(Math.random() * nIds.length)];
-      const dur = +(0.4 + Math.random() * 0.3).toFixed(1);
-      tlRows.splice(idx, 0, { pose_id: pid, duration: dur });
+      tlRows.splice(idx, 0, { pose_id: pid, duration: reqDur });
     });
   }
+
+  // ── Step 3: 생성 포즈(N-series) 랜덤 삽입
+  // 삽입 시 이전 행에서 시간을 빌려 전체 총 길이(≒ 음악 길이)를 보존한다.
+  const nIds = Object.keys(CUSTOM_POSE_META);
+  if (nIds.length) {
+    const slots = [];
+    for (let i = 2; i < tlRows.length - 3; i++) {
+      if (Math.random() < 0.20) slots.push(i + slots.length); // 삽입 후 인덱스 보정
+    }
+    slots.forEach(idx => {
+      const pid  = nIds[Math.floor(Math.random() * nIds.length)];
+      const nDur = +(0.4 + Math.random() * 0.3).toFixed(1);  // 0.4~0.7 s
+      // 앞 행에서 시간을 빌려 총 길이를 유지
+      if (idx > 0 && tlRows[idx - 1].duration > nDur + 0.15) {
+        tlRows[idx - 1].duration = Math.max(0.1, +(tlRows[idx - 1].duration - nDur).toFixed(1));
+      }
+      tlRows.splice(idx, 0, { pose_id: pid, duration: nDur });
+    });
+  }
+
+  // ── Step 4: 전체 상한 재검사 — 어떤 행도 0.8 s 초과 금지
+  tlRows.forEach(r => { r.duration = Math.min(0.8, r.duration); });
 
   renderTLRows();
   const nNote  = nIds.length ? ` + 생성 포즈 ${nIds.length}종` : '';
