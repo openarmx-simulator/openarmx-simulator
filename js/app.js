@@ -956,19 +956,28 @@ function buildDanceSequence(N) {
   function rf(mn, mx) { return +((mn + Math.random()*(mx-mn)).toFixed(1)); }
 
   const G = {
-    basic:   [1,2],
-    kpop:    [...range(49,60),...range(79,84)],
-    side:    range(61,78),
-    guard:   range(85,92),
-    hit:     range(93,102),
-    cut:     range(103,112),
-    inward:  range(113,120),
-    onearm:  range(121,124),
-    dynamic: range(125,136),
-    close:   range(137,144),
-    wide:    range(145,152),
-    extreme: range(161,168),
+    basic:    [1,2],
+    kpop:     [...range(49,60),...range(79,84)],
+    side:     range(61,78),
+    guard:    range(85,92),
+    hit:      range(93,102),
+    cut:      range(103,112),
+    inward:   range(113,120),
+    onearm:   range(121,124),
+    dynamic:  range(125,136),
+    close:    range(137,144),
+    wide:     range(145,152),
+    extreme:  range(161,168),
+    highrise: range(435,466),   // 고각 만세/슈퍼맨 포즈 (L1/R1 ±3 이내)
   };
+  // POSE_DB에 추가된 모든 포즈가 자동으로 포함되도록 동적 extra 풀 구성
+  // → 앞으로 pose_db.js에 커밋하면 별도 수정 없이 생성에 반영됨
+  {
+    const _covered = new Set(Object.values(G).flat());
+    G.extra = Object.keys(POSE_DB)
+      .map(k => parseInt(k.slice(2)))
+      .filter(n => !_covered.has(n) && n > 2);
+  }
   const CAUTION = new Set([52,53,87,90,91,92,94,95,98,99,101,103,104,105,107,108,111,114,115,116,117,118,119,140,143,162,163,164,165,166,167]);
   const BUFFER  = [2,43,64,71,102,120,126,145,161,168];
   const WAVE_FWD = [161,162,163,164,165,166,167,168];
@@ -1002,14 +1011,14 @@ function buildDanceSequence(N) {
   // ── Section 1 (0~20%): 워밍업 ──
   const t1 = +(N * 0.20).toFixed(1);
   while (t < t1) {
-    const p = safe([...G.kpop, ...G.side, ...G.wide]);
+    const p = safe([...G.kpop, ...G.side, ...G.wide, ...G.extra]);
     const iv = rf(0.4, 0.6);
     step(p, iv);
   }
 
   // ── Section 2 (20~45%): 리듬 + 비대칭 ──
   const t2 = +(N * 0.45).toFixed(1);
-  const pools2 = [G.kpop, G.guard, G.hit, G.onearm, G.side];
+  const pools2 = [G.kpop, G.guard, G.hit, G.onearm, G.side, G.extra];
   while (t < t2) {
     const pool = pick(pools2);
     const p = safe(pool);
@@ -1027,7 +1036,7 @@ function buildDanceSequence(N) {
     step(wp, rf(0.45, 0.55));
   }
   while (t < t3) {
-    const pool = [...G.hit, ...G.cut, ...G.wide];
+    const pool = [...G.hit, ...G.cut, ...G.wide, ...G.extra];
     const p = safe(pool);
     step(p, rf(0.4, 0.65));
     if (inGroup(p,'cut') && t < t3 && Math.random() > 0.5) {
@@ -1037,7 +1046,7 @@ function buildDanceSequence(N) {
 
   // ── Section 4 (65~85%): 큰 액션 ──
   const t4 = +(N * 0.85).toFixed(1);
-  const pools4 = [G.dynamic, G.close, [...G.wide, 161, 168]];
+  const pools4 = [G.dynamic, G.close, [...G.wide, 161, 168], G.highrise, G.extra];
   while (t < t4) {
     const pool = pick(pools4);
     const p = safe(pool);
@@ -1048,7 +1057,7 @@ function buildDanceSequence(N) {
   }
 
   // ── Section 5 (85~100%): 피날레 ──
-  const safeFinale = [...G.kpop, ...G.wide, 161, 168].filter(p => !CAUTION.has(p));
+  const safeFinale = [...G.kpop, ...G.wide, 161, 168, ...G.highrise, ...G.extra].filter(p => !CAUTION.has(p));
   while (t < returnTime - 0.5) {
     step(safe(safeFinale), rf(0.4, 0.6));
   }
