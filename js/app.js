@@ -63,18 +63,18 @@ let editingNPoseId = null;     // 수정 중인 N-포즈 ID
 //  poses: 재생할 포즈 ID 배열 / dur: 포즈 1개당 재생 시간(초)
 // ════════════════════════════════════════════════════════════
 const PHRASE_DB = {
-  'PH-001': { name: '웨이브 순방향',    poses: ['P-161','P-162','P-163','P-164','P-165','P-166','P-167','P-168'], dur: 0.45 },
-  'PH-002': { name: '웨이브 역방향',    poses: ['P-168','P-167','P-166','P-165','P-164','P-163','P-162','P-161'], dur: 0.45 },
-  'PH-003': { name: '만세 올리기',      poses: ['P-435','P-437','P-439','P-441','P-444','P-453','P-458','P-466'], dur: 0.4  },
-  'PH-004': { name: '만세 내리기',      poses: ['P-466','P-458','P-453','P-444','P-441','P-439','P-437','P-435'], dur: 0.4  },
-  'PH-005': { name: '리듬 바운스',      poses: ['P-041','P-043','P-045','P-047','P-049','P-047','P-045','P-043'], dur: 0.35 },
-  'PH-006': { name: 'K-pop 리듬',       poses: ['P-079','P-081','P-083','P-085','P-083','P-081','P-079'], dur: 0.4  },
-  'PH-007': { name: '사이드 스웨이',    poses: ['P-071','P-073','P-075','P-077','P-078','P-077','P-075','P-073'], dur: 0.45 },
-  'PH-008': { name: '컷 히트',          poses: ['P-089','P-091','P-093','P-095','P-098','P-095','P-093','P-089'], dur: 0.35 },
-  'PH-009': { name: '인워드 스윙',      poses: ['P-113','P-115','P-117','P-119','P-117','P-115','P-113'], dur: 0.4  },
-  'PH-010': { name: '와이드 스트레치',  poses: ['P-145','P-147','P-149','P-151','P-152','P-151','P-149','P-145'], dur: 0.5  },
-  'PH-011': { name: '팔 점진 올리기',   poses: ['P-003','P-004','P-005','P-006','P-007'], dur: 0.5  },
-  'PH-012': { name: '팔 점진 내리기',   poses: ['P-007','P-006','P-005','P-004','P-003','P-002'], dur: 0.5  },
+  'PH-001': { name: '웨이브 순방향',    poses: ['P-161','P-162','P-163','P-164','P-165','P-166','P-167','P-168'], dur: 0.65 },
+  'PH-002': { name: '웨이브 역방향',    poses: ['P-168','P-167','P-166','P-165','P-164','P-163','P-162','P-161'], dur: 0.65 },
+  'PH-003': { name: '만세 올리기',      poses: ['P-435','P-437','P-439','P-441','P-444','P-453','P-458','P-466'], dur: 0.6  },
+  'PH-004': { name: '만세 내리기',      poses: ['P-466','P-458','P-453','P-444','P-441','P-439','P-437','P-435'], dur: 0.6  },
+  'PH-005': { name: '리듬 바운스',      poses: ['P-041','P-043','P-045','P-047','P-049','P-047','P-045','P-043'], dur: 0.5  },
+  'PH-006': { name: 'K-pop 리듬',       poses: ['P-079','P-081','P-083','P-085','P-083','P-081','P-079'], dur: 0.55 },
+  'PH-007': { name: '사이드 스웨이',    poses: ['P-071','P-073','P-075','P-077','P-078','P-077','P-075','P-073'], dur: 0.65 },
+  'PH-008': { name: '컷 히트',          poses: ['P-089','P-091','P-093','P-095','P-098','P-095','P-093','P-089'], dur: 0.5  },
+  'PH-009': { name: '인워드 스윙',      poses: ['P-113','P-115','P-117','P-119','P-117','P-115','P-113'], dur: 0.6  },
+  'PH-010': { name: '와이드 스트레치',  poses: ['P-145','P-147','P-149','P-151','P-152','P-151','P-149','P-145'], dur: 0.7  },
+  'PH-011': { name: '팔 점진 올리기',   poses: ['P-003','P-004','P-005','P-006','P-007'], dur: 0.7  },
+  'PH-012': { name: '팔 점진 내리기',   poses: ['P-007','P-006','P-005','P-004','P-003','P-002'], dur: 0.7  },
 };
 
 // 타임라인 모드 & 필수 포즈/동작
@@ -735,10 +735,9 @@ function renderTLRows() {
       div.className = 'tl-row tl-row-phrase';
       div.innerHTML = `
         <span class="tl-handle" title="드래그로 순서 변경">⠿</span>
-        <span class="tl-phrase-icon">🎬</span>
-        <span class="tl-phrase-name">${row.name}</span>
-        <span class="tl-cum" title="포즈 수">${row.poses.length}포즈</span>
-        <span class="tl-cum" title="시작 시각">${startSec.toFixed(1)}s</span>
+        <span class="tl-phrase-name">🎬 ${row.name}</span>
+        <span class="tl-phrase-meta">${row.poses.length}포즈 · ${row.duration.toFixed(1)}s</span>
+        <span class="tl-phrase-lock" title="재생 시간 보장 — 이 블록은 압축되지 않습니다">🔒</span>
         <button class="tl-btn" style="color:#a44;" onclick="delTLRow(${i})" title="삭제">✕</button>
       `;
       div.addEventListener('click', e => {
@@ -850,10 +849,12 @@ function renderTLVisBar() {
       // ── 동작 구 세그먼트 ──
       const bg = _PH_COLORS[i % _PH_COLORS.length];
       const showLabel = widthPct > 5;
+      const showDur   = widthPct > 10;
       trackHtml += `<div class="tl-seg tl-seg-phrase" style="width:${widthPct.toFixed(3)}%;background:${bg};"
         data-idx="${i}" onclick="previewTLRow(${i})"
-        title="🎬 ${row.name}  ·  ${row.poses.length}포즈  ·  ${row.duration.toFixed(1)}s  @  ${startSec.toFixed(1)}s">
+        title="🎬 ${row.name}  ·  ${row.poses.length}포즈  ·  ${row.duration.toFixed(1)}s (보장)  @  ${startSec.toFixed(1)}s">
         ${showLabel ? `<span class="tl-seg-id">🎬 ${row.name}</span>` : ''}
+        ${showDur   ? `<span class="tl-seg-dur">🔒${row.duration.toFixed(1)}s</span>` : ''}
       </div>`;
     } else {
       // ── 일반 포즈 세그먼트 ──
@@ -1972,11 +1973,10 @@ function renderReqPhraseChips() {
   wrap.innerHTML = '';
   reqPhrases.forEach((phId, i) => {
     const ph = PHRASE_DB[phId];
+    const totalDur = ph ? +(ph.poses.length * ph.dur).toFixed(1) : '?';
     const chip = document.createElement('div');
-    chip.className = 'req-chip';
-    chip.style.background = '#2a1050';
-    chip.style.borderColor = '#5a2090';
-    chip.innerHTML = `🎬 ${ph ? ph.name : phId}<button class="req-chip-rm" onclick="removeReqPhrase(${i})">✕</button>`;
+    chip.className = 'req-chip req-chip-phrase';
+    chip.innerHTML = `🎬 ${ph ? ph.name : phId} <span style="opacity:.6;font-size:9px;">${totalDur}s</span><button class="req-chip-rm" onclick="removeReqPhrase(${i})">✕</button>`;
     wrap.appendChild(chip);
   });
 }

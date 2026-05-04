@@ -532,15 +532,35 @@ body {
 /* 동작 구(phrase) 편집 행 */
 .tl-row-phrase {
   background:#120830 !important;
-  border-color:#4a1a80 !important;
+  border-color:#5a1aaa !important;
+  border-left:3px solid #8a40ff !important;
+  gap:6px;
 }
-.tl-row-phrase:hover { border-color:#7a3aaa !important; }
-.tl-phrase-icon { font-size:13px; flex-shrink:0; }
+.tl-row-phrase:hover { border-color:#8a3aee !important; background:#180a40 !important; }
 .tl-phrase-name {
   flex:1; font-size:11px; font-weight:700;
   color:#c4a0ff; white-space:nowrap;
   overflow:hidden; text-overflow:ellipsis;
 }
+.tl-phrase-meta {
+  font-size:10px; color:#7a5aaa; white-space:nowrap;
+  font-family:monospace; flex-shrink:0;
+}
+.tl-phrase-lock {
+  font-size:11px; flex-shrink:0; cursor:default;
+  opacity:0.85;
+}
+
+/* 필수 동작 칩 */
+.req-chip-phrase {
+  background:#2a1050 !important;
+  border-color:#5a2090 !important;
+  color:#c4a0ff !important;
+}
+.req-chip-phrase .req-chip-rm { color:#c4a0ff !important; }
 
 /* 동작 구 타임라인 바 세그먼트 */
-.tl-seg-phrase { border-right:2px solid rgba(160,100,255,0.4) !important; }
+.tl-seg-phrase {
+  border-left:2px solid rgba(200,150,255,0.6) !important;
+  border-right:2px solid rgba(160,100,255,0.3) !important;
+}
