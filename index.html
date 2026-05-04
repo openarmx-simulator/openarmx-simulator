@@ -1064,6 +1064,19 @@ let q = { L1:0,L2:0,L3:0.26,L4:0.5,L5:0,L6:0,L7:0,L_grip:0, R1:0,R2:0,R3:-0.26,R
 let allKeyframes = [];
 let selectedTID  = null;   // 선택된 transition_id
 
+// ── 재생 전용 캐시 (animate 루프에서 매 프레임 filter+sort 제거) ──
+let _playTimeline = [];   // 현재 선택된 TID의 정렬된 키프레임 배열
+let _playDur      = 0;    // 마지막 keyframe의 time (= 총 재생 길이)
+
+/** activeTimeline()을 캐시에 반영 — applyTimeline / TID 변경 시 1회만 호출 */
+function _rebuildPlayTimeline() {
+  if (!selectedTID) { _playTimeline = []; _playDur = 0; return; }
+  _playTimeline = allKeyframes
+    .filter(k => k.transition_id === selectedTID)
+    .sort((a, b) => a.time - b.time);
+  _playDur = _playTimeline.length ? _playTimeline[_playTimeline.length - 1].time : 0;
+}
+
 function activeTimeline() {
   if (!selectedTID) return [];
   return allKeyframes
@@ -1375,30 +1388,49 @@ function poseToAngles(poseId) {
 // ════════════════════════════════════════════════════════════
 function smoothStep(t) { return t*t*(3-2*t); }
 
-function interpolate(t) {
-  const tl = activeTimeline();
+/** tl: 미리 계산된 타임라인(선택). 생략 시 activeTimeline() 호출 */
+function interpolate(t, tl) {
+  if (!tl) tl = activeTimeline();
   if (!tl.length) return { ...q };
-  if (tl.length === 1) return poseToAngles(tl[0].pose_id) || { ...q };
+  if (tl.length === 1) {
+    const p0 = poseToAngles(tl[0].pose_id);
+    if (!p0) { console.warn('[interpolate] pose 없음:', tl[0].pose_id); return { ...q }; }
+    return p0;
+  }
 
   let before = tl[0], after = tl[tl.length-1];
   for (let i=0; i<tl.length-1; i++) {
     if (tl[i].time <= t && tl[i+1].time >= t) { before=tl[i]; after=tl[i+1]; break; }
   }
-  if (before.time === after.time) return poseToAngles(before.pose_id) || { ...q };
+  if (before.time === after.time) {
+    const p0 = poseToAngles(before.pose_id);
+    if (!p0) { console.warn('[interpolate] pose 없음:', before.pose_id); return { ...q }; }
+    return p0;
+  }
 
-  const alpha  = (t - before.time) / (after.time - before.time);
-  const s      = smoothStep(Math.max(0, Math.min(1, alpha)));
-  const p1     = poseToAngles(before.pose_id) || q;
-  const p2     = poseToAngles(after.pose_id)  || q;
+  const alpha = (t - before.time) / (after.time - before.time);
+  const s     = smoothStep(Math.max(0, Math.min(1, alpha)));
+  const p1    = poseToAngles(before.pose_id);
+  const p2    = poseToAngles(after.pose_id);
+
+  if (!p1) { console.warn('[interpolate] before pose 없음:', before.pose_id); }
+  if (!p2) { console.warn('[interpolate] after pose 없음:', after.pose_id); }
+
+  const src1 = p1 || q;
+  const src2 = p2 || q;
 
   const out = {};
-  JOINT_KEYS.forEach(k => { out[k] = (p1[k]??0) + ((p2[k]??0) - (p1[k]??0)) * s; });
+  JOINT_KEYS.forEach(k => {
+    const v1 = isFinite(src1[k]) ? src1[k] : 0;
+    const v2 = isFinite(src2[k]) ? src2[k] : 0;
+    out[k] = v1 + (v2 - v1) * s;
+  });
   return out;
 }
 
-// 현재 시간에서 가장 가까운 pose_id 찾기
-function nearestPoseId(t) {
-  const tl = activeTimeline();
+// 현재 시간에서 가장 가까운 pose_id 찾기 (tl: 선택적 사전계산 타임라인)
+function nearestPoseId(t, tl) {
+  if (!tl) tl = activeTimeline();
   if (!tl.length) return '-';
   let best = tl[0];
   for (const kf of tl) { if (kf.time <= t) best = kf; else break; }
@@ -1462,12 +1494,16 @@ window.toggleLoop = function() {
 scrubber.addEventListener('input', () => {
   const t = parseFloat(scrubber.value);
   pauseOffset = t;
-  const ang = interpolate(t);
-  Object.assign(q, ang);
-  updateFK(ang);
+  const tl  = _playTimeline.length ? _playTimeline : activeTimeline();
+  const ang = interpolate(t, tl);
+  // NaN 방어 적용 후 q 갱신
+  const safe = {};
+  JOINT_KEYS.forEach(k => { safe[k] = isFinite(ang[k]) ? ang[k] : (isFinite(q[k]) ? q[k] : 0); });
+  Object.assign(q, safe);
+  updateFK(safe);
   updateTimeLbl(t);
-  document.getElementById('cur-pose-id').textContent = nearestPoseId(t);
-  highlightKFRow(t);
+  document.getElementById('cur-pose-id').textContent = nearestPoseId(t, tl);
+  highlightKFRow(t, tl);
   _audioSeek(t);
 });
 
@@ -1614,6 +1650,14 @@ function tlRowsToKFs() {
 window.applyTimeline = function() {
   if (!tlRows.length) { alert('포즈를 추가하세요.'); return; }
 
+  // ── 포즈 존재 여부 사전 검증 (N-포즈 포함) ──
+  const missingPoses = tlRows.filter(r => !POSE_DB[r.pose_id]).map(r => r.pose_id);
+  if (missingPoses.length) {
+    const names = [...new Set(missingPoses)].join(', ');
+    alert(`아래 포즈가 POSE_DB에 없습니다. 타임라인에서 제거하거나 다시 생성하세요.\n\n${names}`);
+    return;
+  }
+
   const btn = document.querySelector('.apply-btn[onclick*="applyTimeline"]');
 
   function _execute() {
@@ -1621,9 +1665,10 @@ window.applyTimeline = function() {
     allKeyframes = kfs;
     const tids = ['1'];
     selectedTID = '1';
+    _rebuildPlayTimeline();   // ← 캐시 빌드 (animate 루프용)
     renderTIDChips(tids);
     renderKFList();
-    const d = totalDur();
+    const d = _playDur;       // ← 이미 계산됨
     scrubber.max = d;
     stopAnim();
     switchTab('playlist');
@@ -2567,10 +2612,10 @@ function renderTIDChips(tids) {
     chip.textContent = `ID: ${tid}  (${cnt}프레임)`;
     chip.onclick = () => {
       selectedTID = tid;
+      _rebuildPlayTimeline();   // ← TID 변경 시 캐시 재빌드
       wrap.querySelectorAll('.tid-chip').forEach(c => c.classList.remove('on'));
       chip.classList.add('on');
-      const d = totalDur();
-      scrubber.max = d;
+      scrubber.max = _playDur;
       stopAnim();
       renderKFList();
       setStatus(`시퀀스 ${tid} 선택됨`);
@@ -2607,8 +2652,8 @@ function renderKFList() {
 }
 
 let _lastKFHighlight = -1;  // 마지막으로 하이라이트한 행 idx (같으면 스킵)
-function highlightKFRow(t) {
-  const tl = activeTimeline();
+function highlightKFRow(t, tl) {
+  if (!tl) tl = activeTimeline();
   if (!tl.length) return;
   let idx = 0;
   for (let i=0; i<tl.length; i++) { if (tl[i].time <= t) idx=i; else break; }
@@ -2670,10 +2715,17 @@ function animate() {
   orbit.update();
 
   if (isPlaying) {
-    try {
-      let t = (performance.now() - startWall) / 1000;
-      const d = totalDur();
-      if (d > 0) {
+    // _playTimeline / _playDur 는 applyTimeline 시 1회 빌드 → 매 프레임 filter+sort 없음
+    const tl = _playTimeline;
+    const d  = _playDur;
+
+    if (!tl.length || d <= 0) {
+      // 타임라인이 비어있으면 재생 중지
+      isPlaying = false;
+      document.getElementById('btn-play').classList.remove('on');
+    } else {
+      try {
+        let t = (performance.now() - startWall) / 1000;
         if (isLooping) {
           t = t % d;
         } else if (t >= d) {
@@ -2683,20 +2735,28 @@ function animate() {
           _audioPause();
         }
         pauseOffset = t;
-        const ang = interpolate(t);
-        // NaN 방어: 유효하지 않은 각도는 이전 값 유지
+
+        // ── 인터폴레이션 (캐시된 tl 전달 → 내부에서 activeTimeline() 호출 없음) ──
+        const ang = interpolate(t, tl);
+
+        // NaN/비유한 값 방어 (이전에 유한한 q 값으로 폴백)
         const safe = {};
-        JOINT_KEYS.forEach(k => { safe[k] = isFinite(ang[k]) ? ang[k] : (q[k] ?? 0); });
+        JOINT_KEYS.forEach(k => {
+          safe[k] = isFinite(ang[k]) ? ang[k] : (isFinite(q[k]) ? q[k] : 0);
+        });
         Object.assign(q, safe);
         updateFK(safe);
+
         scrubber.value = t;
-        updateTimeLbl(t);
-        document.getElementById('cur-pose-id').textContent = nearestPoseId(t);
-        highlightKFRow(t);
+        // 시간 레이블 — totalDur() 호출 없이 _playDur 사용
+        document.getElementById('time-lbl').textContent = `${t.toFixed(2)} / ${d.toFixed(1)} s`;
+        document.getElementById('cur-pose-id').textContent = nearestPoseId(t, tl);
+        highlightKFRow(t, tl);
+      } catch(e) {
+        console.error('[animate] 재생 오류:', e, '| 타임라인:', tl.length, '개, 현재 포즈:', nearestPoseId(pauseOffset, tl));
+        isPlaying = false;
+        document.getElementById('btn-play').classList.remove('on');
       }
-    } catch(e) {
-      console.error('[animate] 재생 오류:', e);
-      isPlaying = false;
     }
   }
 
