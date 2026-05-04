@@ -482,6 +482,25 @@ body {
   flex-shrink:0; padding:8px 12px 6px;
   border-bottom:1px solid #181830; background:#07070f;
 }
+/* 미니 재생 컨트롤 */
+#tl-mini-ctrl {
+  display:flex; align-items:center; gap:4px; margin-bottom:7px;
+}
+.tl-ctrl-btn {
+  background:var(--c-muted); border:1px solid var(--c-border);
+  color:var(--c-text); padding:4px 11px;
+  border-radius:var(--btn-radius); cursor:pointer;
+  font-size:13px; line-height:1;
+  transition:var(--btn-transition); user-select:none;
+}
+.tl-ctrl-btn:hover { background:var(--c-muted-h); color:var(--c-text-hi); border-color:#3a4a80; }
+.tl-ctrl-btn.on { background:var(--c-primary); border-color:var(--c-primary-h); color:#fff; }
+#tl-time-disp {
+  margin-left:auto; font-size:11px; color:#446;
+  font-family:monospace; white-space:nowrap;
+}
+/* 트랙 클릭 가능 표시 */
+#tl-track { cursor:crosshair; }
 #tl-ruler {
   height:14px; position:relative; margin-bottom:3px;
 }
@@ -684,6 +703,14 @@ body {
     </div>
     <!-- 비주얼 타임라인 바 -->
     <div id="tl-vis-wrap">
+      <!-- 미니 재생 컨트롤 -->
+      <div id="tl-mini-ctrl">
+        <button class="tl-ctrl-btn" id="tl-btn-play"  onclick="playAnim()"    title="재생">▶</button>
+        <button class="tl-ctrl-btn" id="tl-btn-pause" onclick="pauseAnim()"   title="일시정지">⏸</button>
+        <button class="tl-ctrl-btn" id="tl-btn-stop"  onclick="stopAnim()"    title="정지">⏹</button>
+        <button class="tl-ctrl-btn" id="tl-btn-loop"  onclick="toggleLoop()"  title="반복">↺</button>
+        <span id="tl-time-disp">0.0 / 0.0 s</span>
+      </div>
       <div id="tl-ruler"></div>
       <div id="tl-track">
         <div id="tl-playhead" style="left:0%"></div>
@@ -1518,8 +1545,7 @@ window.playAnim = function() {
   if (!activeTimeline().length) { alert('타임라인에서 포즈를 추가하고 [✓ 적용 & 재생]을 눌러주세요.'); return; }
   startWall = performance.now() - pauseOffset * 1000;
   isPlaying = true;
-  document.getElementById('btn-play').classList.add('on');
-  document.getElementById('btn-pause').classList.remove('on');
+  _syncPlayBtns();
   _audioPlay(pauseOffset);
 };
 window.pauseAnim = function() {
@@ -1528,13 +1554,12 @@ window.pauseAnim = function() {
   const d = totalDur();
   if (d>0) pauseOffset %= d;
   isPlaying = false;
-  document.getElementById('btn-pause').classList.add('on');
-  document.getElementById('btn-play').classList.remove('on');
+  _syncPlayBtns();
   _audioPause();
 };
 window.stopAnim = function() {
   isPlaying = false; pauseOffset = 0;
-  ['btn-play','btn-pause'].forEach(id => document.getElementById(id).classList.remove('on'));
+  _syncPlayBtns();
   scrubber.value = 0;
   updateTimeLbl(0);
   updateFK(q);
@@ -1546,7 +1571,7 @@ window.stopAnim = function() {
 };
 window.toggleLoop = function() {
   isLooping = !isLooping;
-  document.getElementById('btn-loop').classList.toggle('on', isLooping);
+  _syncPlayBtns();
 };
 
 scrubber.addEventListener('input', () => {
@@ -1568,8 +1593,42 @@ scrubber.addEventListener('input', () => {
 
 function updateTimeLbl(t) {
   const d = totalDur();
-  document.getElementById('time-lbl').textContent = `${t.toFixed(2)} / ${d.toFixed(1)} s`;
+  const txt = `${t.toFixed(2)} / ${d.toFixed(1)} s`;
+  document.getElementById('time-lbl').textContent = txt;
+  const sd = document.getElementById('tl-time-disp');
+  if (sd) sd.textContent = txt;
 }
+
+// 재생 버튼 상태 동기화 (playbar + sidebar 동시)
+function _syncPlayBtns() {
+  ['btn-play','tl-btn-play'].forEach(id =>
+    document.getElementById(id)?.classList.toggle('on', isPlaying));
+  ['btn-pause','tl-btn-pause'].forEach(id =>
+    document.getElementById(id)?.classList.toggle('on', !isPlaying && pauseOffset > 0));
+  ['btn-loop','tl-btn-loop'].forEach(id =>
+    document.getElementById(id)?.classList.toggle('on', isLooping));
+}
+
+// 클릭한 x 위치 → 시간으로 변환해 탐색
+window.seekToTime = function(t) {
+  const tl = _playTimeline.length ? _playTimeline : activeTimeline();
+  if (!tl.length) return;
+  const d = _playDur || totalDur();
+  if (!d) return;
+  t = Math.max(0, Math.min(t, d));
+  pauseOffset = t;
+  scrubber.value = t;
+  const ang = interpolate(t, tl);
+  const safe = {};
+  JOINT_KEYS.forEach(k => { safe[k] = isFinite(ang[k]) ? ang[k] : (isFinite(q[k]) ? q[k] : 0); });
+  Object.assign(q, safe);
+  updateFK(safe);
+  updateTimeLbl(t);
+  document.getElementById('cur-pose-id').textContent = nearestPoseId(t, tl);
+  highlightKFRow(t, tl);
+  _updateTLPlayhead(t, d);
+  _audioSeek(t);
+};
 
 // ════════════════════════════════════════════════════════════
 //  녹화
@@ -1728,6 +1787,19 @@ function renderTLVisBar() {
 
   trackHtml += '<div id="tl-playhead" style="left:0%"></div>';
   track.innerHTML = trackHtml;
+
+  // 트랙 클릭 → 해당 시간으로 탐색
+  track.onclick = e => {
+    const rect = track.getBoundingClientRect();
+    const pct  = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    seekToTime(pct * total);
+    // 클릭한 세그먼트 인덱스 찾아 미리보기 (세그먼트 영역 클릭 시)
+    const seg = e.target.closest('.tl-seg');
+    if (seg) {
+      const idx = parseInt(seg.dataset.idx);
+      if (!isNaN(idx)) previewTLRow(idx);
+    }
+  };
 }
 
 // 비주얼 바 플레이헤드 위치 갱신
@@ -2933,7 +3005,7 @@ function animate() {
     if (!tl.length || d <= 0) {
       // 타임라인이 비어있으면 재생 중지
       isPlaying = false;
-      document.getElementById('btn-play').classList.remove('on');
+      _syncPlayBtns();
     } else {
       try {
         let t = (performance.now() - startWall) / 1000;
@@ -2942,7 +3014,7 @@ function animate() {
         } else if (t >= d) {
           t = d;
           isPlaying = false;
-          document.getElementById('btn-play').classList.remove('on');
+          _syncPlayBtns();
           _audioPause();
         }
         pauseOffset = t;
@@ -2967,7 +3039,7 @@ function animate() {
       } catch(e) {
         console.error('[animate] 재생 오류:', e, '| 타임라인:', tl.length, '개, 현재 포즈:', nearestPoseId(pauseOffset, tl));
         isPlaying = false;
-        document.getElementById('btn-play').classList.remove('on');
+        _syncPlayBtns();
       }
     }
   }
@@ -2988,6 +3060,7 @@ renderTLRows();
 updateFK(q);
 resizeRenderer();
 animate();
+_syncPlayBtns();
 setStatus('메시 로딩 중...');
 
 // 팔레트 외부 클릭 닫기
