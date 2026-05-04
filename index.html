@@ -1244,42 +1244,45 @@ const POSE_DB = {
 // ════════════════════════════════════════════════════════════
 //  Arm Module DB — POSE_DB에서 왼팔/오른팔 자동 분리
 // ════════════════════════════════════════════════════════════
-function _actLv(angles) {
-  // sum range ~0-8 rad across 7 joints → map to 1-10
-  const sum = Object.values(angles).reduce((s, v) => s + Math.abs(v), 0);
+// ── Canonical Module helpers ─────────────────────────────────
+// canonical = left-arm 기준 { J1..J7 }
+// 미러 규칙: J1,J2,J3,J5,J6,J7 부호 반전 / J4(팔꿈치) 부호 유지
+function _lToCanon(p)    { return {J1:p.L1,J2:p.L2,J3:p.L3,J4:p.L4,J5:p.L5,J6:p.L6,J7:p.L7}; }
+function _rToCanon(p)    { return {J1:-(p.R1||0),J2:-(p.R2||0),J3:-(p.R3||0),J4:(p.R4||0),J5:-(p.R5||0),J6:-(p.R6||0),J7:-(p.R7||0)}; }
+function _canonToLeft(j) { return {L1:j.J1,L2:j.J2,L3:j.J3,L4:j.J4,L5:j.J5,L6:j.J6,L7:j.J7}; }
+function _canonToRight(j){ return {R1:-j.J1,R2:-j.J2,R3:-j.J3,R4:j.J4,R5:-j.J5,R6:-j.J6,R7:-j.J7}; }
+function _canonKey(j)    { return [j.J1,j.J2,j.J3,j.J4,j.J5,j.J6,j.J7].map(v=>Math.round((v||0)*100)/100).join(','); }
+function _canonScore(j)  { return 1.5*Math.abs(j.J2)+1.2*Math.abs(j.J1)+0.5*Math.abs(j.J4)+0.3*Math.abs(j.J3); }
+function _actLv(j) {
+  const sum = Object.values(j).reduce((s,v) => s + Math.abs(v||0), 0);
   return Math.max(1, Math.min(10, Math.ceil(sum / 0.8)));
 }
 
-// 정렬 기준: 중립(정자세) → 팔 올라감(L2/R2) → 바깥쪽 회전(L1/R1) → 굽힘(L4/R4)
-function _lScore(a) {
-  return 1.5*Math.abs(a.L2) + 1.2*Math.abs(a.L1) + 0.5*Math.abs(a.L4) + 0.3*Math.abs(a.L3);
-}
-function _rScore(a) {
-  return 1.5*Math.abs(a.R2) + 1.2*Math.abs(a.R1) + 0.5*Math.abs(a.R4) + 0.3*Math.abs(a.R3);
-}
+// ── CANON_MODULE_DB : M-001, M-002, ... ─────────────────────
+// POSE_DB의 모든 포즈에서 왼팔·오른팔(→ 반전) 후보를 동시 추출,
+// 소수점 2자리 기준 dedupe 후 활동량 순 넘버링.
+// M-xxx 하나로 왼팔(그대로)·오른팔(반전) 모두 적용 가능.
+const CANON_MODULE_DB = {};
+(function _buildCanonDB() {
+  const _map = {}; // dedup key → { J, sources[] }
+  Object.entries(POSE_DB).forEach(([pid, p]) => {
+    [[_lToCanon(p), 'L'], [_rToCanon(p), 'R']].forEach(([j, side]) => {
+      const key = _canonKey(j);
+      const src = `${pid}:${side}`;
+      if (_map[key]) { _map[key].sources.push(src); }
+      else           { _map[key] = { J: j, sources: [src] }; }
+    });
+  });
+  Object.values(_map)
+    .sort((a, b) => _canonScore(a.J) - _canonScore(b.J))
+    .forEach((e, i) => {
+      const id = `M-${String(i+1).padStart(3,'0')}`;
+      CANON_MODULE_DB[id] = { J: e.J, sources: e.sources, activity: _actLv(e.J) };
+    });
+})();
 
-const ARM_MODULE_DB = { left: {}, right: {} };
-
-const _lEntries = Object.entries(POSE_DB).map(([pid, p]) => ({
-  source: pid,
-  angles: { L1:p.L1,L2:p.L2,L3:p.L3,L4:p.L4,L5:p.L5,L6:p.L6,L7:p.L7 }
-}));
-const _rEntries = Object.entries(POSE_DB).map(([pid, p]) => ({
-  source: pid,
-  angles: { R1:p.R1,R2:p.R2,R3:p.R3,R4:p.R4,R5:p.R5,R6:p.R6,R7:p.R7 }
-}));
-
-_lEntries.sort((a, b) => _lScore(a.angles) - _lScore(b.angles));
-_rEntries.sort((a, b) => _rScore(a.angles) - _rScore(b.angles));
-
-_lEntries.forEach((e, i) => {
-  const id = `L-${String(i+1).padStart(3,'0')}`;
-  ARM_MODULE_DB.left[id]  = { angles: e.angles, source: e.source, activity: _actLv(e.angles) };
-});
-_rEntries.forEach((e, i) => {
-  const id = `R-${String(i+1).padStart(3,'0')}`;
-  ARM_MODULE_DB.right[id] = { angles: e.angles, source: e.source, activity: _actLv(e.angles) };
-});
+// 하위 호환 shim — 레거시 경로가 ARM_MODULE_DB를 참조하더라도 동작하도록 유지
+const ARM_MODULE_DB = { left: CANON_MODULE_DB, right: CANON_MODULE_DB };
 
 // 생성 포즈 (N-series) 메타 데이터
 const CUSTOM_POSE_META = {};   // { 'N-001': { lMod, rMod } }
@@ -2536,21 +2539,24 @@ window.setModFilter = function(side, f) {
 };
 
 function renderModList(side) {
-  const db  = side === 'L' ? ARM_MODULE_DB.left : ARM_MODULE_DB.right;
+  // 좌우 모두 동일한 CANON_MODULE_DB를 표시 — 적용 시에만 방향 변환
   const f   = side === 'L' ? lModFilter : rModFilter;
   const sel = side === 'L' ? selectedLModule : selectedRModule;
   const [mn, mx] = _modRange(f);
   const listEl = document.getElementById(side === 'L' ? 'l-mod-list' : 'r-mod-list');
   listEl.innerHTML = '';
-  Object.entries(db).forEach(([id, mod]) => {
+  Object.entries(CANON_MODULE_DB).forEach(([id, mod]) => {
     if (mod.activity < mn || mod.activity > mx) return;
     const card = document.createElement('div');
     card.className = 'mod-card' + (id === sel ? ' selected' : '');
-    card.id = `mc-${id}`;
+    card.id = `mc-${side}-${id}`;
     const bw = Math.round(mod.activity * 12);
+    // source 레이블: 최초 출처 2개만 표시 (ⓛ=left 원본, ⓡ=right 반전)
+    const srcLabel = mod.sources.slice(0,2)
+      .map(s => s.replace(':L','ⓛ').replace(':R','ⓡ')).join(' ');
     card.innerHTML =
       `<span class="mod-id">${id}</span>` +
-      `<span class="mod-src">${mod.source}</span>` +
+      `<span class="mod-src">${srcLabel}</span>` +
       `<span class="mod-act-bar" style="width:${bw}px"></span>` +
       `<span class="mod-act-num">${mod.activity}</span>`;
     card.onclick = () => {
@@ -2560,20 +2566,19 @@ function renderModList(side) {
       else              selectedRModule = id;
       lastFocusedSide = side;
 
-      // ── 중립 자세(P-001) 기준으로 선택된 모듈만 적용 ──
-      // animate() 루프가 q를 매 프레임 덮어쓰므로, q에 의존하지 않고
-      // 항상 neutral + 선택된 모듈 각도로 q를 완전히 재구성한다.
+      // P-001 중립 기준으로 재구성 후 canonical 변환 적용
       const _neutral = POSE_DB['P-001'] || {};
       Object.assign(q, _neutral);
-      const _lM = selectedLModule ? ARM_MODULE_DB.left[selectedLModule]  : null;
-      const _rM = selectedRModule ? ARM_MODULE_DB.right[selectedRModule] : null;
-      if (_lM) Object.assign(q, _lM.angles);
-      if (_rM) Object.assign(q, _rM.angles);
+      if (selectedLModule && CANON_MODULE_DB[selectedLModule])
+        Object.assign(q, _canonToLeft(CANON_MODULE_DB[selectedLModule].J));
+      if (selectedRModule && CANON_MODULE_DB[selectedRModule])
+        Object.assign(q, _canonToRight(CANON_MODULE_DB[selectedRModule].J));
       updateFK(q);
 
       document.getElementById('cur-pose-id').textContent =
-        (selectedLModule || '?') + '+' + (selectedRModule || '?');
-      setStatus(`${side === 'L' ? '왼팔' : '오른팔'} 모듈 ${id} 적용됨`);
+        'L:' + (selectedLModule||'?') + ' R:' + (selectedRModule||'?');
+      const dir = side === 'L' ? '왼팔(canonical)' : '오른팔(mirror)';
+      setStatus(`${dir} ${id} 적용됨`);
       _updateCompPanel();
       _runRealtimeCheck();
     };
@@ -2582,12 +2587,12 @@ function renderModList(side) {
 }
 
 function _updateCompPanel() {
-  const lM = selectedLModule ? ARM_MODULE_DB.left[selectedLModule]   : null;
-  const rM = selectedRModule ? ARM_MODULE_DB.right[selectedRModule]  : null;
+  const lM = selectedLModule ? CANON_MODULE_DB[selectedLModule] : null;
+  const rM = selectedRModule ? CANON_MODULE_DB[selectedRModule] : null;
   const lEl = document.getElementById('comp-l-val');
   const rEl = document.getElementById('comp-r-val');
-  if (lEl) lEl.textContent = lM ? `${selectedLModule}  (${lM.source}, lv.${lM.activity})` : '—';
-  if (rEl) rEl.textContent = rM ? `${selectedRModule}  (${rM.source}, lv.${rM.activity})` : '—';
+  if (lEl) lEl.textContent = lM ? `L:${selectedLModule}  (${lM.sources[0]}, lv.${lM.activity})` : '—';
+  if (rEl) rEl.textContent = rM ? `R:${selectedRModule}  (${rM.sources[0]}, lv.${rM.activity})` : '—';
 }
 
 function renderModulePanel() {
@@ -2610,7 +2615,7 @@ document.addEventListener('keydown', e => {
   if (!cards.length) return;
 
   const selId  = side === 'L' ? selectedLModule : selectedRModule;
-  const curIdx = selId ? cards.findIndex(c => c.id === `mc-${selId}`) : -1;
+  const curIdx = selId ? cards.findIndex(c => c.id === `mc-${side}-${selId}`) : -1;
 
   const nextIdx = e.key === 'ArrowDown'
     ? Math.min(cards.length - 1, curIdx + 1)
@@ -2659,13 +2664,12 @@ function _nextNId() {
   return `N-${String(next).padStart(3, '0')}`;
 }
 
-// 대칭 모듈 ID 계산 (L-192 + R-174 → symL=L-174, symR=R-192)
+// 대칭 모듈 ID 계산 — M-xxx 공통 네임스페이스이므로 단순 swap
+// L:M-005 + R:M-012 의 대칭 = L:M-012 + R:M-005
 function _symMods(lMod, rMod) {
   if (!lMod || !rMod) return null;
-  const lNum = lMod.replace('L-', '');
-  const rNum = rMod.replace('R-', '');
-  if (lNum === rNum) return null; // 이미 대칭 포즈
-  return { lMod: `L-${rNum}`, rMod: `R-${lNum}` };
+  if (lMod === rMod) return null; // 이미 대칭 (같은 모듈)
+  return { lMod: rMod, rMod: lMod };
 }
 
 window.saveComposite = function() {
@@ -2677,24 +2681,27 @@ window.saveComposite = function() {
   // animate() 루프가 q를 매 프레임 덮어쓰기 때문에 q에서 직접 읽으면
   // 선택하지 않은 팔에 애니메이션 중간값이 섞일 수 있다.
   // → 선택된 모듈 DB 값을 우선 사용하고, 미선택 팔은 P-001 중립값으로 대체한다.
-  const _saveLM = selectedLModule ? ARM_MODULE_DB.left[selectedLModule]  : null;
-  const _saveRM = selectedRModule ? ARM_MODULE_DB.right[selectedRModule] : null;
+  const _saveLM = selectedLModule ? CANON_MODULE_DB[selectedLModule] : null;
+  const _saveRM = selectedRModule ? CANON_MODULE_DB[selectedRModule] : null;
   const _saveNeutral = POSE_DB['P-001'] || {};
+  // canonical → 실제 L/R 각도 변환
+  const _lAngles = _saveLM ? _canonToLeft(_saveLM.J)  : null;
+  const _rAngles = _saveRM ? _canonToRight(_saveRM.J) : null;
   const curAngles = {
-    L1: _saveLM ? (_saveLM.angles.L1||0) : (_saveNeutral.L1||0),
-    L2: _saveLM ? (_saveLM.angles.L2||0) : (_saveNeutral.L2||0),
-    L3: _saveLM ? (_saveLM.angles.L3||0) : (_saveNeutral.L3||0),
-    L4: _saveLM ? (_saveLM.angles.L4||0) : (_saveNeutral.L4||0),
-    L5: _saveLM ? (_saveLM.angles.L5||0) : (_saveNeutral.L5||0),
-    L6: _saveLM ? (_saveLM.angles.L6||0) : (_saveNeutral.L6||0),
-    L7: _saveLM ? (_saveLM.angles.L7||0) : (_saveNeutral.L7||0),
-    R1: _saveRM ? (_saveRM.angles.R1||0) : (_saveNeutral.R1||0),
-    R2: _saveRM ? (_saveRM.angles.R2||0) : (_saveNeutral.R2||0),
-    R3: _saveRM ? (_saveRM.angles.R3||0) : (_saveNeutral.R3||0),
-    R4: _saveRM ? (_saveRM.angles.R4||0) : (_saveNeutral.R4||0),
-    R5: _saveRM ? (_saveRM.angles.R5||0) : (_saveNeutral.R5||0),
-    R6: _saveRM ? (_saveRM.angles.R6||0) : (_saveNeutral.R6||0),
-    R7: _saveRM ? (_saveRM.angles.R7||0) : (_saveNeutral.R7||0),
+    L1: _lAngles ? (_lAngles.L1||0) : (_saveNeutral.L1||0),
+    L2: _lAngles ? (_lAngles.L2||0) : (_saveNeutral.L2||0),
+    L3: _lAngles ? (_lAngles.L3||0) : (_saveNeutral.L3||0),
+    L4: _lAngles ? (_lAngles.L4||0) : (_saveNeutral.L4||0),
+    L5: _lAngles ? (_lAngles.L5||0) : (_saveNeutral.L5||0),
+    L6: _lAngles ? (_lAngles.L6||0) : (_saveNeutral.L6||0),
+    L7: _lAngles ? (_lAngles.L7||0) : (_saveNeutral.L7||0),
+    R1: _rAngles ? (_rAngles.R1||0) : (_saveNeutral.R1||0),
+    R2: _rAngles ? (_rAngles.R2||0) : (_saveNeutral.R2||0),
+    R3: _rAngles ? (_rAngles.R3||0) : (_saveNeutral.R3||0),
+    R4: _rAngles ? (_rAngles.R4||0) : (_saveNeutral.R4||0),
+    R5: _rAngles ? (_rAngles.R5||0) : (_saveNeutral.R5||0),
+    R6: _rAngles ? (_rAngles.R6||0) : (_saveNeutral.R6||0),
+    R7: _rAngles ? (_rAngles.R7||0) : (_saveNeutral.R7||0),
   };
 
   if (editingNPoseId) {
@@ -3011,11 +3018,11 @@ window.editCustomPose = function(id) {
   selectedRModule = meta.rMod || null;
   renderModulePanel();
   if (selectedLModule) {
-    const lCard = document.getElementById(`mc-${selectedLModule}`);
+    const lCard = document.getElementById(`mc-L-${selectedLModule}`);
     if (lCard) { lCard.classList.add('selected'); lCard.scrollIntoView({ block:'nearest' }); }
   }
   if (selectedRModule) {
-    const rCard = document.getElementById(`mc-${selectedRModule}`);
+    const rCard = document.getElementById(`mc-R-${selectedRModule}`);
     if (rCard) { rCard.classList.add('selected'); rCard.scrollIntoView({ block:'nearest' }); }
   }
   _updateCompPanel();
