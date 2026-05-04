@@ -72,7 +72,7 @@ body {
 
 /* ── 사이드바 ── */
 #sidebar {
-  width:500px; background:#0d0d1e;
+  width:560px; background:#0d0d1e;
   border-left:1px solid #181830;
   display:flex; flex-direction:column; overflow:hidden;
 }
@@ -564,3 +564,73 @@ body {
   border-left:2px solid rgba(200,150,255,0.6) !important;
   border-right:2px solid rgba(160,100,255,0.3) !important;
 }
+
+/* ── 동작 선언 탭 ── */
+.ph-card {
+  background:#111125; border:1px solid #1c1c38;
+  border-radius:7px; margin-bottom:8px; overflow:hidden;
+  transition:border-color .15s;
+}
+.ph-card.ph-editing { border-color:#4a90e2; background:#0b1626; }
+.ph-card-header {
+  display:flex; align-items:center; gap:6px;
+  padding:9px 11px; border-bottom:1px solid #181835;
+}
+.ph-card-id { font-size:10px; font-family:monospace; color:#8a6af0; min-width:50px; font-weight:700; }
+.ph-card-name { flex:1; font-size:12px; font-weight:600; color:#cde; }
+.ph-card-meta { font-size:10px; color:#4a5a7a; white-space:nowrap; }
+.ph-card-poses { display:flex; flex-wrap:wrap; gap:3px; padding:5px 11px 9px; }
+.ph-pose-chip {
+  font-size:9px; font-family:monospace; background:#181838;
+  border:1px solid #25254a; border-radius:3px; padding:2px 6px; color:#889;
+  cursor:pointer; transition:all .1s;
+}
+.ph-pose-chip:hover { background:#22224a; color:#cdf; border-color:#4a4a8a; }
+/* 구 액션 버튼 */
+.ph-btn {
+  padding:3px 9px; border-radius:3px; font-size:10px; font-weight:600;
+  cursor:pointer; border:1px solid; transition:all .12s; white-space:nowrap;
+}
+.ph-btn-play { background:#112211; border-color:#2a5a2a; color:#4e4; }
+.ph-btn-play:hover { background:#1a3a1a; color:#6f6; }
+.ph-btn-edit { background:#111a36; border-color:#2a3a70; color:#4af; }
+.ph-btn-edit:hover { background:#1a2a5a; }
+.ph-btn-save { background:#163866; border-color:#3a7ae0; color:#fff; }
+.ph-btn-save:hover { background:#1e4a8a; }
+.ph-btn-cancel { background:#1e1010; border-color:#4a2222; color:#f88; }
+.ph-btn-cancel:hover { background:#2a1515; }
+.ph-btn-add-row { background:#0f1e0f; border-color:#254a25; color:#6d4; font-size:10px; padding:3px 8px; }
+.ph-btn-add-row:hover { background:#182818; }
+.ph-btn-del-row { background:#1e0808; border-color:#3a1515; color:#f55; padding:2px 6px; font-size:9px; }
+.ph-btn-del-row:hover { background:#2a1010; }
+.ph-btn-move { background:#12121e; border-color:#222240; color:#668; padding:2px 5px; font-size:10px; }
+.ph-btn-move:hover { background:#1a1a30; color:#aac; }
+/* 편집 폼 */
+.ph-edit-body { padding:10px 12px 12px; }
+.ph-edit-row { display:flex; align-items:center; gap:6px; margin-bottom:7px; }
+.ph-edit-lbl { font-size:10px; color:#557; min-width:54px; flex-shrink:0; }
+.ph-inp {
+  background:#07071c; border:1px solid #1e1e44; border-radius:3px;
+  color:#cde; font-size:11px; padding:4px 8px; outline:none;
+}
+.ph-inp:focus { border-color:#4a90e2; }
+.ph-inp-name { flex:1; }
+.ph-inp-dur { width:60px; text-align:center; font-family:monospace; }
+.ph-pose-list { margin:4px 0 6px; display:flex; flex-direction:column; gap:2px; }
+.ph-pose-edit-row {
+  display:flex; align-items:center; gap:4px;
+  background:#09091e; border:1px solid #181840; border-radius:3px; padding:3px 6px;
+}
+.ph-pose-num { font-size:9px; color:#3a4a66; font-family:monospace; min-width:18px; text-align:right; }
+.ph-pose-text-inp {
+  flex:1; background:#050518; border:1px solid #181840; border-radius:2px;
+  color:#aac; font-family:monospace; font-size:11px; padding:2px 6px; outline:none;
+}
+.ph-pose-text-inp:focus { border-color:#4a90e2; }
+.ph-edit-footer { display:flex; gap:5px; margin-top:8px; }
+/* 신규 구 폼 */
+#new-phrase-form {
+  background:#0a1522; border:1px solid #2a3a6a;
+  border-radius:7px; padding:12px; margin-bottom:10px;
+}
+.ph-form-title { font-size:11px; color:#4af; font-weight:700; letter-spacing:.5px; margin-bottom:10px; }

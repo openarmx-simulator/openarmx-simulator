@@ -2231,15 +2231,392 @@ window.previewPose = function(id) {
 
 // 탭 전환
 window.switchTab = function(tab) {
-  // playlist는 숨김 처리됐으므로 timeline으로 리다이렉트
   if (tab === 'playlist') tab = 'timeline';
-  const tabs = ['poses','custom','timeline','modules'];
+  const tabs = ['poses','custom','timeline','modules','phrases'];
   document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', tabs[i]===tab));
   document.querySelectorAll('.tab-pane').forEach(p => p.classList.toggle('active', p.id===`tab-${tab}`));
+  if (tab === 'phrases') renderPhraseList();
 };
 
 // 상태 텍스트
 function setStatus(msg) { document.getElementById('status-lbl').textContent = msg; }
+
+// ════════════════════════════════════════════════════════════
+//  동작 선언 탭 — 구(Phrase) 라이브러리 관리
+// ════════════════════════════════════════════════════════════
+let _editingPhraseId   = null;  // 현재 편집 중인 구 ID
+let _editingPhraseBuf  = null;  // 편집 버퍼 { name, poses[], dur }
+let _showNewPhraseForm = false;
+let _newPhraseBuf      = null;  // 신규 구 버퍼 { name, poses[], dur }
+
+// ── 구 목록 렌더 ──────────────────────────────────────────────
+function renderPhraseList() {
+  const container = document.getElementById('phrase-list');
+  if (!container) return;
+  container.innerHTML = '';
+
+  // 신규 구 작성 폼
+  if (_showNewPhraseForm && _newPhraseBuf) {
+    container.appendChild(_buildNewPhraseForm());
+  }
+
+  // 기존 구 카드
+  Object.entries(PHRASE_DB).forEach(([phId, ph]) => {
+    const isEditing = _editingPhraseId === phId;
+    container.appendChild(isEditing
+      ? _buildPhraseEditCard(phId, _editingPhraseBuf)
+      : _buildPhraseViewCard(phId, ph));
+  });
+}
+
+// ── 뷰 카드 ──────────────────────────────────────────────────
+function _buildPhraseViewCard(phId, ph) {
+  const totalDur = +(ph.poses.length * ph.dur).toFixed(1);
+  const div = document.createElement('div');
+  div.className = 'ph-card';
+  div.id = `ph-card-${phId}`;
+
+  // 포즈 칩 HTML
+  const chipsHTML = ph.poses.map(pid =>
+    `<span class="ph-pose-chip" onclick="previewPose('${pid}')" title="${pid} 미리보기">${pid}</span>`
+  ).join('');
+
+  div.innerHTML = `
+    <div class="ph-card-header">
+      <span class="ph-card-id">${phId}</span>
+      <span class="ph-card-name">${ph.name}</span>
+      <span class="ph-card-meta">${ph.poses.length}포즈 · ${totalDur}s · ${ph.dur}s/포즈</span>
+      <button class="ph-btn ph-btn-play" onclick="previewPhrase('${phId}')" title="1회 재생">▶</button>
+      <button class="ph-btn ph-btn-edit" onclick="startEditPhrase('${phId}')">✎ 편집</button>
+    </div>
+    <div class="ph-card-poses">${chipsHTML}</div>`;
+  return div;
+}
+
+// ── 편집 카드 ─────────────────────────────────────────────────
+function _buildPhraseEditCard(phId, buf) {
+  const div = document.createElement('div');
+  div.className = 'ph-card ph-editing';
+  div.id = `ph-card-${phId}`;
+
+  const poseRowsHTML = buf.poses.map((pid, i) => `
+    <div class="ph-pose-edit-row" id="ph-erow-${phId}-${i}">
+      <span class="ph-pose-num">${i+1}</span>
+      <input class="ph-pose-text-inp" list="pose-datalist"
+        value="${pid}" placeholder="P-001"
+        id="ph-einp-${phId}-${i}"
+        onchange="onPhrasePoseChange('${phId}',${i},this.value)"/>
+      <button class="ph-btn ph-btn-move" onclick="movePhraseRow('${phId}',${i},-1)" title="위로">↑</button>
+      <button class="ph-btn ph-btn-move" onclick="movePhraseRow('${phId}',${i},+1)" title="아래로">↓</button>
+      <button class="ph-btn ph-btn-play" style="padding:2px 7px;font-size:9px;" onclick="previewPose('${pid}')" title="미리보기">▶</button>
+      <button class="ph-btn ph-btn-del-row" onclick="removePhraseRow('${phId}',${i})">✕</button>
+    </div>`).join('');
+
+  div.innerHTML = `
+    <div class="ph-card-header">
+      <span class="ph-card-id">${phId}</span>
+      <span class="ph-card-name" style="color:#4af;">편집 중</span>
+      <button class="ph-btn ph-btn-save" onclick="savePhrase('${phId}')">💾 저장</button>
+      <button class="ph-btn ph-btn-cancel" onclick="cancelPhraseEdit()">✕ 취소</button>
+    </div>
+    <div class="ph-edit-body">
+      <div class="ph-edit-row">
+        <span class="ph-edit-lbl">이름</span>
+        <input class="ph-inp ph-inp-name" id="ph-name-inp-${phId}" value="${buf.name}"
+          oninput="_editingPhraseBuf.name=this.value"/>
+      </div>
+      <div class="ph-edit-row">
+        <span class="ph-edit-lbl">포즈당 시간</span>
+        <input class="ph-inp ph-inp-dur" type="number" step="0.05" min="0.1" max="5"
+          id="ph-dur-inp-${phId}" value="${buf.dur}"
+          oninput="_editingPhraseBuf.dur=parseFloat(this.value)||0.5"/>
+        <span style="font-size:10px;color:#445;">초</span>
+        <span style="font-size:10px;color:#4a5a7a;margin-left:8px;">
+          합계: <b id="ph-total-lbl-${phId}">${(buf.poses.length*buf.dur).toFixed(1)}s</b>
+        </span>
+      </div>
+      <div style="font-size:10px;color:#557;margin-bottom:5px;">포즈 목록 (클릭하여 포즈 ID 수정)</div>
+      <div class="ph-pose-list" id="ph-pose-list-${phId}">${poseRowsHTML}</div>
+      <div class="ph-edit-footer">
+        <button class="ph-btn ph-btn-add-row" onclick="addPhraseRow('${phId}')">+ 포즈 추가</button>
+        <button class="ph-btn ph-btn-play" onclick="previewPhrase('${phId}','edit')" style="margin-left:auto;">▶ 편집본 미리보기</button>
+      </div>
+    </div>`;
+  return div;
+}
+
+// ── 신규 구 폼 ────────────────────────────────────────────────
+function _buildNewPhraseForm() {
+  const buf = _newPhraseBuf;
+  const wrap = document.createElement('div');
+  wrap.id = 'new-phrase-form';
+
+  const poseRowsHTML = buf.poses.map((pid, i) => `
+    <div class="ph-pose-edit-row" id="ph-nrow-${i}">
+      <span class="ph-pose-num">${i+1}</span>
+      <input class="ph-pose-text-inp" list="pose-datalist"
+        value="${pid}" placeholder="P-001"
+        onchange="onNewPhrasePoseChange(${i},this.value)"/>
+      <button class="ph-btn ph-btn-play" style="padding:2px 7px;font-size:9px;" onclick="previewPose('${pid}')" title="미리보기">▶</button>
+      <button class="ph-btn ph-btn-del-row" onclick="removeNewPhraseRow(${i})">✕</button>
+    </div>`).join('');
+
+  wrap.innerHTML = `
+    <div class="ph-form-title">✦ 신규 동작 추가</div>
+    <div class="ph-edit-row">
+      <span class="ph-edit-lbl">이름</span>
+      <input class="ph-inp ph-inp-name" id="new-ph-name" value="${buf.name}"
+        oninput="_newPhraseBuf.name=this.value" placeholder="동작 이름 입력"/>
+    </div>
+    <div class="ph-edit-row">
+      <span class="ph-edit-lbl">포즈당 시간</span>
+      <input class="ph-inp ph-inp-dur" type="number" step="0.05" min="0.1" max="5"
+        id="new-ph-dur" value="${buf.dur}"
+        oninput="_newPhraseBuf.dur=parseFloat(this.value)||0.5"/>
+      <span style="font-size:10px;color:#445;">초</span>
+    </div>
+    <div style="font-size:10px;color:#557;margin-bottom:5px;">포즈 목록</div>
+    <div class="ph-pose-list" id="new-ph-pose-list">${poseRowsHTML}</div>
+    <div class="ph-edit-footer" style="margin-top:6px;">
+      <button class="ph-btn ph-btn-add-row" onclick="addNewPhraseRow()">+ 포즈 추가</button>
+    </div>
+    <div class="ph-edit-footer" style="margin-top:10px;">
+      <button class="ph-btn ph-btn-save" onclick="saveNewPhrase()">💾 저장</button>
+      <button class="ph-btn ph-btn-cancel" onclick="cancelNewPhrase()">✕ 취소</button>
+    </div>`;
+  return wrap;
+}
+
+// ── 구 미리보기 재생 ──────────────────────────────────────────
+window.previewPhrase = function(phId, mode) {
+  // mode='edit'이면 편집 버퍼 사용
+  const ph = (mode === 'edit' && _editingPhraseBuf) ? _editingPhraseBuf : PHRASE_DB[phId];
+  if (!ph || !ph.poses.length) return;
+
+  // 유효한 포즈만 필터
+  const validPoses = ph.poses.filter(pid => POSE_DB[pid]);
+  if (!validPoses.length) { setStatus('⚠ 유효한 포즈가 없습니다.'); return; }
+
+  const kfs = validPoses.map((pid, i) => ({
+    time: +(i * ph.dur).toFixed(3),
+    pose_id: pid,
+    transition_id: '__preview__'
+  }));
+  const totalDur = +(validPoses.length * ph.dur).toFixed(2);
+
+  _playTimeline = kfs;
+  _playDur      = totalDur;
+  _tlTotalDur   = totalDur;
+  _kfToTLRowIdx = kfs.map((_, i) => i);
+  scrubber.max  = totalDur;
+  isLooping     = false;
+  _syncPlayBtns();
+  stopAnim();
+  playAnim();
+  setStatus(`🎬 ${ph.name} 미리보기 (${validPoses.length}포즈 · ${totalDur}s)`);
+};
+
+// ── 편집 시작/취소/저장 ───────────────────────────────────────
+window.startEditPhrase = function(phId) {
+  const ph = PHRASE_DB[phId];
+  if (!ph) return;
+  _editingPhraseId  = phId;
+  _editingPhraseBuf = { name: ph.name, poses: [...ph.poses], dur: ph.dur };
+  _showNewPhraseForm = false;
+  renderPhraseList();
+  // 편집 카드로 스크롤
+  setTimeout(() => {
+    const card = document.getElementById(`ph-card-${phId}`);
+    if (card) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 50);
+};
+
+window.cancelPhraseEdit = function() {
+  _editingPhraseId  = null;
+  _editingPhraseBuf = null;
+  renderPhraseList();
+};
+
+window.savePhrase = function(phId) {
+  const buf = _editingPhraseBuf;
+  if (!buf) return;
+  const name = (document.getElementById(`ph-name-inp-${phId}`)?.value || buf.name).trim();
+  const dur  = parseFloat(document.getElementById(`ph-dur-inp-${phId}`)?.value) || buf.dur;
+  if (!name) { alert('이름을 입력하세요.'); return; }
+  if (buf.poses.length < 2) { alert('포즈를 2개 이상 추가하세요.'); return; }
+  // 유효성 검사
+  const invalid = buf.poses.filter(p => !POSE_DB[p]);
+  if (invalid.length) { alert(`존재하지 않는 포즈:\n${invalid.join(', ')}`); return; }
+
+  PHRASE_DB[phId] = { name, poses: [...buf.poses], dur: Math.max(0.1, dur) };
+  // 필수 구 드롭다운 갱신
+  _refreshPhraseSelect();
+  _editingPhraseId  = null;
+  _editingPhraseBuf = null;
+  renderPhraseList();
+  setStatus(`✓ ${phId} (${name}) 저장됨`);
+};
+
+// ── 편집 카드 포즈 조작 ───────────────────────────────────────
+window.onPhrasePoseChange = function(phId, idx, val) {
+  if (_editingPhraseBuf) _editingPhraseBuf.poses[idx] = val.trim();
+  // 합계 레이블 갱신
+  const lbl = document.getElementById(`ph-total-lbl-${phId}`);
+  if (lbl && _editingPhraseBuf)
+    lbl.textContent = (_editingPhraseBuf.poses.length * _editingPhraseBuf.dur).toFixed(1) + 's';
+};
+
+window.addPhraseRow = function(phId) {
+  if (!_editingPhraseBuf) return;
+  _editingPhraseBuf.poses.push('P-001');
+  // 편집 카드 내 pose-list 만 리렌더
+  const listEl = document.getElementById(`ph-pose-list-${phId}`);
+  if (listEl) listEl.outerHTML = `<div class="ph-pose-list" id="ph-pose-list-${phId}">${
+    _editingPhraseBuf.poses.map((pid, i) => `
+      <div class="ph-pose-edit-row">
+        <span class="ph-pose-num">${i+1}</span>
+        <input class="ph-pose-text-inp" list="pose-datalist" value="${pid}" placeholder="P-001"
+          id="ph-einp-${phId}-${i}"
+          onchange="onPhrasePoseChange('${phId}',${i},this.value)"/>
+        <button class="ph-btn ph-btn-move" onclick="movePhraseRow('${phId}',${i},-1)">↑</button>
+        <button class="ph-btn ph-btn-move" onclick="movePhraseRow('${phId}',${i},+1)">↓</button>
+        <button class="ph-btn ph-btn-play" style="padding:2px 7px;font-size:9px;" onclick="previewPose('${pid}')">▶</button>
+        <button class="ph-btn ph-btn-del-row" onclick="removePhraseRow('${phId}',${i})">✕</button>
+      </div>`).join('')
+  }</div>`;
+};
+
+window.removePhraseRow = function(phId, idx) {
+  if (!_editingPhraseBuf || _editingPhraseBuf.poses.length <= 2) { alert('최소 2개 포즈가 필요합니다.'); return; }
+  _editingPhraseBuf.poses.splice(idx, 1);
+  renderPhraseList();
+};
+
+window.movePhraseRow = function(phId, idx, dir) {
+  if (!_editingPhraseBuf) return;
+  const poses = _editingPhraseBuf.poses;
+  const j = idx + dir;
+  if (j < 0 || j >= poses.length) return;
+  [poses[idx], poses[j]] = [poses[j], poses[idx]];
+  renderPhraseList();
+};
+
+// ── 신규 구 작성 ─────────────────────────────────────────────
+window.toggleNewPhraseForm = function() {
+  _showNewPhraseForm = !_showNewPhraseForm;
+  if (_showNewPhraseForm) {
+    _newPhraseBuf    = { name: '새 동작', poses: ['P-001', 'P-002'], dur: 0.5 };
+    _editingPhraseId = null;
+    _editingPhraseBuf = null;
+  } else {
+    _newPhraseBuf = null;
+  }
+  renderPhraseList();
+  if (_showNewPhraseForm) {
+    setTimeout(() => {
+      const form = document.getElementById('new-phrase-form');
+      if (form) form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      document.getElementById('new-ph-name')?.focus();
+    }, 60);
+  }
+};
+
+window.cancelNewPhrase = function() {
+  _showNewPhraseForm = false;
+  _newPhraseBuf = null;
+  renderPhraseList();
+};
+
+window.addNewPhraseRow = function() {
+  if (!_newPhraseBuf) return;
+  _newPhraseBuf.poses.push('P-001');
+  // pose-list만 갱신
+  const listEl = document.getElementById('new-ph-pose-list');
+  if (listEl) {
+    listEl.innerHTML = _newPhraseBuf.poses.map((pid, i) => `
+      <div class="ph-pose-edit-row">
+        <span class="ph-pose-num">${i+1}</span>
+        <input class="ph-pose-text-inp" list="pose-datalist" value="${pid}" placeholder="P-001"
+          onchange="onNewPhrasePoseChange(${i},this.value)"/>
+        <button class="ph-btn ph-btn-play" style="padding:2px 7px;font-size:9px;" onclick="previewPose('${pid}')">▶</button>
+        <button class="ph-btn ph-btn-del-row" onclick="removeNewPhraseRow(${i})">✕</button>
+      </div>`).join('');
+  }
+};
+
+window.removeNewPhraseRow = function(idx) {
+  if (!_newPhraseBuf || _newPhraseBuf.poses.length <= 2) { alert('최소 2개 포즈가 필요합니다.'); return; }
+  _newPhraseBuf.poses.splice(idx, 1);
+  renderPhraseList();
+};
+
+window.onNewPhrasePoseChange = function(idx, val) {
+  if (_newPhraseBuf) _newPhraseBuf.poses[idx] = val.trim();
+};
+
+window.saveNewPhrase = function() {
+  const buf = _newPhraseBuf;
+  if (!buf) return;
+  const name = (document.getElementById('new-ph-name')?.value || buf.name).trim();
+  const dur  = parseFloat(document.getElementById('new-ph-dur')?.value) || buf.dur;
+  if (!name) { alert('이름을 입력하세요.'); return; }
+  if (buf.poses.length < 2) { alert('포즈를 2개 이상 추가하세요.'); return; }
+  const invalid = buf.poses.filter(p => !POSE_DB[p]);
+  if (invalid.length) { alert(`존재하지 않는 포즈:\n${invalid.join(', ')}`); return; }
+
+  // 다음 PH-xxx ID 생성
+  const maxNum = Object.keys(PHRASE_DB)
+    .map(k => parseInt(k.slice(3)))
+    .reduce((m, n) => Math.max(m, n), 0);
+  const newId = `PH-${String(maxNum + 1).padStart(3, '0')}`;
+
+  PHRASE_DB[newId] = { name, poses: [...buf.poses], dur: Math.max(0.1, dur) };
+  _refreshPhraseSelect();
+  _showNewPhraseForm = false;
+  _newPhraseBuf = null;
+  renderPhraseList();
+  setStatus(`✓ ${newId} (${name}) 추가됨`);
+  // 새 카드로 스크롤
+  setTimeout(() => {
+    const card = document.getElementById(`ph-card-${newId}`);
+    if (card) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 80);
+};
+
+// 필수 동작 드롭다운 갱신 (PHRASE_DB 변경 시 호출)
+function _refreshPhraseSelect() {
+  const sel = document.getElementById('req-phrase-sel');
+  if (!sel) return;
+  const cur = sel.value;
+  // 이미 없는 옵션만 추가 (기존 옵션은 유지)
+  const existing = new Set(Array.from(sel.options).map(o => o.value));
+  Object.entries(PHRASE_DB).forEach(([id, ph]) => {
+    if (!existing.has(id)) {
+      const opt = document.createElement('option');
+      opt.value = id;
+      opt.textContent = `${id} ${ph.name}`;
+      sel.appendChild(opt);
+    } else {
+      // 이름 변경 반영
+      const opt = Array.from(sel.options).find(o => o.value === id);
+      if (opt) opt.textContent = `${id} ${ph.name}`;
+    }
+  });
+  if (cur) sel.value = cur;
+}
+
+// ── 포즈 datalist 생성 (구 편집기 자동완성) ───────────────────
+(function _buildPoseDatalist() {
+  if (document.getElementById('pose-datalist')) return;
+  const dl = document.createElement('datalist');
+  dl.id = 'pose-datalist';
+  Object.keys(POSE_DB).forEach(pid => {
+    const opt = document.createElement('option');
+    opt.value = pid;
+    dl.appendChild(opt);
+  });
+  document.body.appendChild(dl);
+})();
 
 // ════════════════════════════════════════════════════════════
 //  TCP 위치 표시

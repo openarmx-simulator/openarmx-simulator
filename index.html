@@ -92,6 +92,7 @@
     <div class="tab-btn"       onclick="switchTab('custom')">생성 포즈</div>
     <div class="tab-btn"       onclick="switchTab('timeline')">타임라인</div>
     <div class="tab-btn"       onclick="switchTab('modules')">모듈 조합</div>
+    <div class="tab-btn"       onclick="switchTab('phrases')">동작 선언</div>
   </div>
 
   <!-- ── 기존 포즈 탭 ── -->
@@ -270,6 +271,17 @@
     </div>
   </div>
 </div>
+
+  <!-- ── 동작 선언 탭 ── -->
+  <div id="tab-phrases" class="tab-pane" style="flex-direction:column;overflow:hidden;">
+    <!-- 헤더 -->
+    <div style="padding:10px 12px 9px;border-bottom:1px solid #181830;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;">
+      <span class="sec" style="margin:0;">동작 구 라이브러리</span>
+      <button class="ph-btn ph-btn-edit" style="font-size:11px;padding:4px 11px;" onclick="toggleNewPhraseForm()">+ 신규 동작</button>
+    </div>
+    <!-- 구 목록 -->
+    <div class="scroll" id="phrase-list"></div>
+  </div>
 
 <script type="importmap">
 {
