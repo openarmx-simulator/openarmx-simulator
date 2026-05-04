@@ -1143,32 +1143,37 @@ const SKIN_PRESETS = {
 
 // 씬 내 모든 Mesh 색상 재적용 (getMat 기준으로 재매핑)
 function _recolorScene() {
+  // 순회 1회로 통합: 링크 메시 + 관절 마커를 한 번에 처리
   sceneRoot.traverse(obj => {
     if (!(obj instanceof THREE.Mesh) || !obj.material) return;
     const name = obj.parent && obj.parent.name ? obj.parent.name : '';
-    let target = null;
-    if (name === 'body')                                   target = MAT.body;
-    else if (name.includes('hand') || name.includes('_f')) target = MAT.hand;
-    else if (name.startsWith('L'))                         target = MAT.left;
-    else if (name.startsWith('R'))                         target = MAT.right;
-    if (target) {
-      obj.material.color.copy(target.color);
-      obj.material.roughness  = target.roughness;
-      obj.material.metalness  = target.metalness;
-      obj.material.needsUpdate = true;
-    }
-  });
-  // 관절 마커
-  sceneRoot.traverse(obj => {
-    if (!(obj instanceof THREE.Mesh) || !obj.material) return;
-    const name = obj.parent && obj.parent.name ? obj.parent.name : '';
+
+    // 관절 구 마커 (SphereGeometry, radius ≤ 0.01)
     const isJoint = obj.geometry && obj.geometry.type === 'SphereGeometry' &&
                     obj.geometry.parameters && obj.geometry.parameters.radius <= 0.01;
-    if (!isJoint) return;
-    const src = name.startsWith('L') ? MAT.jL : name.startsWith('R') ? MAT.jR : null;
-    if (src) {
-      obj.material.color.copy(src.color);
-      obj.material.emissive.copy(src.emissive);
+    if (isJoint) {
+      const src = name.startsWith('L') ? MAT.jL : name.startsWith('R') ? MAT.jR : null;
+      if (src) {
+        obj.material.color.copy(src.color);
+        obj.material.emissive.copy(src.emissive);
+        obj.material.needsUpdate = true;
+      }
+      return; // 관절 마커는 여기서 처리 완료
+    }
+
+    // TCP 마커 (SphereGeometry, radius > 0.01) → 색상 유지
+    if (obj.geometry && obj.geometry.type === 'SphereGeometry') return;
+
+    // STL 링크 메시
+    let target = null;
+    if      (name === 'body')                               target = MAT.body;
+    else if (name.includes('hand') || name.includes('_f')) target = MAT.hand;
+    else if (name.startsWith('L'))                          target = MAT.left;
+    else if (name.startsWith('R'))                          target = MAT.right;
+    if (target) {
+      obj.material.color.copy(target.color);
+      obj.material.roughness = target.roughness;
+      obj.material.metalness = target.metalness;
       obj.material.needsUpdate = true;
     }
   });
@@ -1356,7 +1361,12 @@ function updateFK(angles) {
 
 function poseToAngles(poseId) {
   const p = POSE_DB[poseId];
-  if (!p) return null;
+  if (!p) {
+    // N-포즈가 POSE_DB에 없으면 allKeyframes 적용 전 페이지 상태 불일치
+    console.warn('[poseToAngles] 포즈를 찾을 수 없음:', poseId,
+      '— POSE_IDS에 포함 여부:', POSE_IDS.includes(poseId));
+    return null;
+  }
   return { ...p, L_grip:0, R_grip:0 };
 }
 
@@ -1507,14 +1517,16 @@ const POSE_IDS = Object.keys(POSE_DB); // P-001 ~ P-168
 
 // 옵션 HTML을 한 번만 빌드하고 캐시 (POSE_IDS 변경 시 무효화)
 let _tlOptsCache = null;
+let _tlOptsCachedCount = 0;   // 포즈 개수 기준으로 비교 (문자열 길이 아님)
 function _getTLOptsHtml() {
-  if (!_tlOptsCache || _tlOptsCache.length !== POSE_IDS.length) {
+  if (!_tlOptsCache || _tlOptsCachedCount !== POSE_IDS.length) {
     _tlOptsCache = POSE_IDS.map(id => `<option value="${id}">${id}</option>`).join('');
+    _tlOptsCachedCount = POSE_IDS.length;
   }
   return _tlOptsCache;
 }
 // 캐시 무효화
-function _invalidateTLCache() { _tlOptsCache = null; }
+function _invalidateTLCache() { _tlOptsCache = null; _tlOptsCachedCount = 0; }
 
 // 기존 select들에 새 포즈 옵션만 추가 (전체 재빌드 없이)
 function _appendPoseOptToSelects(id) {
@@ -2569,6 +2581,7 @@ function renderTIDChips(tids) {
 
 // 키프레임 목록
 function renderKFList() {
+  _lastKFHighlight = -1; // 리스트 재빌드 시 하이라이트 초기화
   const area = document.getElementById('kf-list');
   area.innerHTML = '';
   const tl = activeTimeline();
@@ -2593,13 +2606,17 @@ function renderKFList() {
   });
 }
 
+let _lastKFHighlight = -1;  // 마지막으로 하이라이트한 행 idx (같으면 스킵)
 function highlightKFRow(t) {
   const tl = activeTimeline();
-  document.querySelectorAll('.kf-row').forEach(r => r.classList.remove('current'));
+  if (!tl.length) return;
   let idx = 0;
   for (let i=0; i<tl.length; i++) { if (tl[i].time <= t) idx=i; else break; }
+  if (idx === _lastKFHighlight) return; // 동일 행 → DOM 작업 스킵
+  _lastKFHighlight = idx;
+  document.querySelectorAll('.kf-row').forEach(r => r.classList.remove('current'));
   const row = document.getElementById(`kf-row-${idx}`);
-  if (row) { row.classList.add('current'); row.scrollIntoView({block:'nearest'}); }
+  if (row) { row.classList.add('current'); row.scrollIntoView({block:'nearest', behavior:'instant'}); }
 }
 
 window.previewPose = function(id) {
@@ -2653,25 +2670,33 @@ function animate() {
   orbit.update();
 
   if (isPlaying) {
-    let t = (performance.now() - startWall) / 1000;
-    const d = totalDur();
-    if (d > 0) {
-      if (isLooping) {
-        t = t % d;
-      } else if (t >= d) {
-        t = d;
-        isPlaying = false;
-        document.getElementById('btn-play').classList.remove('on');
-        _audioPause();
+    try {
+      let t = (performance.now() - startWall) / 1000;
+      const d = totalDur();
+      if (d > 0) {
+        if (isLooping) {
+          t = t % d;
+        } else if (t >= d) {
+          t = d;
+          isPlaying = false;
+          document.getElementById('btn-play').classList.remove('on');
+          _audioPause();
+        }
+        pauseOffset = t;
+        const ang = interpolate(t);
+        // NaN 방어: 유효하지 않은 각도는 이전 값 유지
+        const safe = {};
+        JOINT_KEYS.forEach(k => { safe[k] = isFinite(ang[k]) ? ang[k] : (q[k] ?? 0); });
+        Object.assign(q, safe);
+        updateFK(safe);
+        scrubber.value = t;
+        updateTimeLbl(t);
+        document.getElementById('cur-pose-id').textContent = nearestPoseId(t);
+        highlightKFRow(t);
       }
-      pauseOffset = t;
-      const ang = interpolate(t);
-      Object.assign(q, ang);
-      updateFK(ang);
-      scrubber.value = t;
-      updateTimeLbl(t);
-      document.getElementById('cur-pose-id').textContent = nearestPoseId(t);
-      highlightKFRow(t);
+    } catch(e) {
+      console.error('[animate] 재생 오류:', e);
+      isPlaying = false;
     }
   }
 
