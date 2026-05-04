@@ -482,23 +482,6 @@ body {
   flex-shrink:0; padding:8px 12px 6px;
   border-bottom:1px solid #181830; background:#07070f;
 }
-/* 미니 재생 컨트롤 */
-#tl-mini-ctrl {
-  display:flex; align-items:center; gap:4px; margin-bottom:7px;
-}
-.tl-ctrl-btn {
-  background:var(--c-muted); border:1px solid var(--c-border);
-  color:var(--c-text); padding:4px 11px;
-  border-radius:var(--btn-radius); cursor:pointer;
-  font-size:13px; line-height:1;
-  transition:var(--btn-transition); user-select:none;
-}
-.tl-ctrl-btn:hover { background:var(--c-muted-h); color:var(--c-text-hi); border-color:#3a4a80; }
-.tl-ctrl-btn.on { background:var(--c-primary); border-color:var(--c-primary-h); color:#fff; }
-#tl-time-disp {
-  margin-left:auto; font-size:11px; color:#446;
-  font-family:monospace; white-space:nowrap;
-}
 /* 트랙 클릭 가능 표시 */
 #tl-track { cursor:crosshair; }
 #tl-ruler {
@@ -703,37 +686,37 @@ body {
     </div>
     <!-- 비주얼 타임라인 바 -->
     <div id="tl-vis-wrap">
-      <!-- 미니 재생 컨트롤 -->
-      <div id="tl-mini-ctrl">
-        <button class="tl-ctrl-btn" id="tl-btn-play"  onclick="playAnim()"    title="재생">▶</button>
-        <button class="tl-ctrl-btn" id="tl-btn-pause" onclick="pauseAnim()"   title="일시정지">⏸</button>
-        <button class="tl-ctrl-btn" id="tl-btn-stop"  onclick="stopAnim()"    title="정지">⏹</button>
-        <button class="tl-ctrl-btn" id="tl-btn-loop"  onclick="toggleLoop()"  title="반복">↺</button>
-        <span id="tl-time-disp">0.0 / 0.0 s</span>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;">
+        <span style="font-size:9px;color:#334;letter-spacing:1.2px;text-transform:uppercase;">타임라인 미리보기 &nbsp;·&nbsp; 클릭으로 탐색</span>
+        <span id="tl-time-disp" style="font-size:10px;color:#446;font-family:monospace;">0.0 / 0.0 s</span>
       </div>
       <div id="tl-ruler"></div>
       <div id="tl-track">
         <div id="tl-playhead" style="left:0%"></div>
       </div>
     </div>
-    <!-- 포즈 행 목록 (스크롤) -->
-    <div id="tl-rows" class="scroll" style="flex:1;padding:8px;"></div>
-    <!-- 하단 버튼 -->
-    <div style="padding:8px 12px;border-top:1px solid #181830;flex-shrink:0;display:flex;flex-direction:column;gap:6px;">
-      <div id="tl-total" style="font-size:11px;color:#445;text-align:right;"></div>
+    <!-- 적용 & 재생 버튼 — 바로 아래 배치 -->
+    <div style="padding:8px 12px;border-bottom:1px solid #181830;flex-shrink:0;">
       <button class="apply-btn" style="margin:0;" onclick="applyTimeline()">✓ 적용 &amp; 재생</button>
-      <!-- 음악 연결 -->
-      <div style="display:flex;align-items:center;gap:5px;padding:4px 0;border-top:1px solid #151528;margin-top:1px;">
+    </div>
+    <!-- 포즈 편집 목록 (스크롤) -->
+    <div id="tl-rows" class="scroll" style="flex:1;padding:8px;"></div>
+    <!-- 하단 유틸 -->
+    <div style="padding:6px 12px 8px;border-top:1px solid #181830;flex-shrink:0;display:flex;flex-direction:column;gap:5px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div id="tl-total" style="font-size:11px;color:#445;"></div>
+        <div style="display:flex;gap:4px;">
+          <button class="exp-btn" style="padding:3px 9px;font-size:10px;" onclick="exportJSON()">JSON</button>
+          <button class="exp-btn" style="padding:3px 9px;font-size:10px;" onclick="exportYAML()">YAML</button>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:5px;">
         <span style="font-size:10px;color:#4a90e2;white-space:nowrap;flex-shrink:0;">🎵 음악</span>
         <input type="file" id="pl-music-inp" accept="audio/*"
           style="flex:1;min-width:0;font-size:10px;color:#8af;background:#0a0a1e;border:1px solid #222240;border-radius:3px;padding:2px 4px;cursor:pointer;"
           onchange="attachPlaylistMusic(this)"/>
         <span id="pl-music-status" style="font-size:10px;color:#556;white-space:nowrap;flex-shrink:0;">없음</span>
         <button class="exp-btn" style="padding:2px 7px;font-size:10px;color:#f86;border-color:#6a1a1a;flex-shrink:0;" onclick="detachMusic()">제거</button>
-      </div>
-      <div class="export-row">
-        <button class="exp-btn" onclick="exportJSON()">JSON 내보내기</button>
-        <button class="exp-btn" onclick="exportYAML()">YAML 내보내기</button>
       </div>
     </div>
   </div>
@@ -1599,14 +1582,11 @@ function updateTimeLbl(t) {
   if (sd) sd.textContent = txt;
 }
 
-// 재생 버튼 상태 동기화 (playbar + sidebar 동시)
+// 재생 버튼 상태 동기화 (playbar)
 function _syncPlayBtns() {
-  ['btn-play','tl-btn-play'].forEach(id =>
-    document.getElementById(id)?.classList.toggle('on', isPlaying));
-  ['btn-pause','tl-btn-pause'].forEach(id =>
-    document.getElementById(id)?.classList.toggle('on', !isPlaying && pauseOffset > 0));
-  ['btn-loop','tl-btn-loop'].forEach(id =>
-    document.getElementById(id)?.classList.toggle('on', isLooping));
+  document.getElementById('btn-play')?.classList.toggle('on', isPlaying);
+  document.getElementById('btn-pause')?.classList.toggle('on', !isPlaying && pauseOffset > 0);
+  document.getElementById('btn-loop')?.classList.toggle('on', isLooping);
 }
 
 // 클릭한 x 위치 → 시간으로 변환해 탐색
