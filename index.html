@@ -236,6 +236,42 @@ body {
   .hud-chip { font-size:10px; padding:4px 8px; }
 }
 
+/* ── 배경 컬러 선택기 ── */
+#bg-picker-wrap {
+  position:absolute; top:12px; right:12px;
+  display:flex; flex-direction:column; align-items:flex-end; gap:6px;
+  z-index:500; pointer-events:all;
+}
+#bg-picker-toggle {
+  width:30px; height:30px; border-radius:50%;
+  border:2px solid rgba(255,255,255,0.25);
+  cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,0.5);
+  transition:transform .15s, border-color .15s;
+  background:#0a0a18;
+}
+#bg-picker-toggle:hover { transform:scale(1.1); border-color:rgba(255,255,255,0.5); }
+#bg-palette {
+  display:none; flex-direction:column; gap:5px; align-items:flex-end;
+  background:rgba(10,10,25,0.92); border:1px solid #2a3060;
+  border-radius:10px; padding:8px 10px;
+  box-shadow:0 8px 24px rgba(0,0,0,0.6);
+}
+#bg-palette.open { display:flex; }
+.bg-palette-row { display:flex; gap:5px; align-items:center; }
+.bg-swatch {
+  width:22px; height:22px; border-radius:50%; cursor:pointer;
+  border:2px solid transparent; transition:transform .12s, border-color .12s;
+  box-shadow:0 1px 4px rgba(0,0,0,0.4);
+}
+.bg-swatch:hover  { transform:scale(1.18); }
+.bg-swatch.active { border-color:#4a90e2; transform:scale(1.12); }
+#bg-custom-inp {
+  width:22px; height:22px; border-radius:50%; cursor:pointer;
+  border:2px solid #334; padding:0; overflow:hidden;
+  background:none; outline:none;
+}
+#bg-palette-label { font-size:9px; color:#556; letter-spacing:1px; text-align:right; }
+
 /* ── 온보딩 가이드 ── */
 #guide-overlay {
   position:fixed; inset:0; z-index:9999;
@@ -438,6 +474,22 @@ body {
     <div class="hud-chip" id="pose-hud">현재 포즈: <span id="cur-pose-id" style="color:#4af">-</span></div>
   </div>
   <div id="rec-badge">● REC</div>
+
+  <!-- 배경 컬러 선택기 -->
+  <div id="bg-picker-wrap">
+    <div id="bg-picker-toggle" title="배경 색상 변경" onclick="toggleBgPalette()"></div>
+    <div id="bg-palette">
+      <div id="bg-palette-label">배경 색상</div>
+      <div class="bg-palette-row">
+        <div class="bg-swatch active" data-bg="dark"   style="background:#0a0a18;" title="어두운 (기본)"  onclick="setBgPreset('dark')"></div>
+        <div class="bg-swatch"        data-bg="navy"   style="background:#0d1a2e;" title="딥 네이비"      onclick="setBgPreset('navy')"></div>
+        <div class="bg-swatch"        data-bg="black"  style="background:#000000;" title="완전 검정"      onclick="setBgPreset('black')"></div>
+        <div class="bg-swatch"        data-bg="lgray"  style="background:#b0b8c8;" title="밝은 회색"      onclick="setBgPreset('lgray')"></div>
+        <div class="bg-swatch"        data-bg="white"  style="background:#f0f0f5;" title="흰색"            onclick="setBgPreset('white')"></div>
+        <input type="color" id="bg-custom-inp" title="직접 선택" value="#0a0a18" oninput="setBgCustom(this.value)">
+      </div>
+    </div>
+  </div>
 
   <!-- 재생바 -->
   <div id="playbar">
@@ -989,6 +1041,58 @@ const scene  = new THREE.Scene();
 scene.background = new THREE.Color(0x0a0a18);
 scene.fog = new THREE.FogExp2(0x0a0a18, 0.10);
 
+// ── 배경 컬러 프리셋 ──
+const BG_PRESETS = {
+  dark:  { bg:'#0a0a18', fog:'#0a0a18', fogD:0.10, grid1:'#223344', grid2:'#111122', light:false },
+  navy:  { bg:'#0d1a2e', fog:'#0d1a2e', fogD:0.08, grid1:'#1a3050', grid2:'#0d1a2e', light:false },
+  black: { bg:'#000000', fog:'#000000', fogD:0.12, grid1:'#1a1a1a', grid2:'#111111', light:false },
+  lgray: { bg:'#b0b8c8', fog:'#b0b8c8', fogD:0.06, grid1:'#7a8898', grid2:'#90a0b0', light:true  },
+  white: { bg:'#f0f0f5', fog:'#f0f0f5', fogD:0.04, grid1:'#aaaacc', grid2:'#ccccdd', light:true  },
+};
+
+function _applyBg(hex, preset) {
+  // Three.js
+  scene.background.set(hex);
+  scene.fog.color.set(hex);
+  if (preset) scene.fog.density = preset.fogD;
+
+  // 그리드 색상
+  if (preset && grid) {
+    grid.material[0].color.set(preset.grid1);
+    grid.material[1].color.set(preset.grid2);
+  }
+
+  // CSS 뷰포트 배경
+  const vp = document.getElementById('viewport');
+  vp.style.background = hex;
+
+  // 토글 버튼 색상 동기화
+  const tog = document.getElementById('bg-picker-toggle');
+  if (tog) tog.style.background = hex;
+
+  // localStorage 저장
+  localStorage.setItem('oax_bg', hex);
+}
+
+window.toggleBgPalette = function() {
+  document.getElementById('bg-palette').classList.toggle('open');
+};
+
+window.setBgPreset = function(key) {
+  const p = BG_PRESETS[key];
+  if (!p) return;
+  _applyBg(p.bg, p);
+  // 스와치 active 표시
+  document.querySelectorAll('.bg-swatch').forEach(s => s.classList.toggle('active', s.dataset.bg === key));
+  document.getElementById('bg-custom-inp').value = p.bg;
+};
+
+window.setBgCustom = function(hex) {
+  _applyBg(hex, null);
+  document.querySelectorAll('.bg-swatch').forEach(s => s.classList.remove('active'));
+  document.getElementById('bg-picker-toggle').style.background = hex;
+};
+
 const camera = new THREE.PerspectiveCamera(42, 1, 0.01, 30);
 camera.position.set(1.8, 1.2, 2.2);
 camera.lookAt(0, 0.5, 0);
@@ -1011,6 +1115,17 @@ fill.position.set(-2,2,-2); scene.add(fill);
 
 const grid = new THREE.GridHelper(4,24,0x223344,0x111122);
 scene.add(grid);
+
+// 저장된 배경색 복원
+(function() {
+  const saved = localStorage.getItem('oax_bg');
+  if (saved) {
+    // 프리셋 매칭 시도
+    const matchKey = Object.keys(BG_PRESETS).find(k => BG_PRESETS[k].bg === saved);
+    if (matchKey) setBgPreset(matchKey);
+    else setBgCustom(saved);
+  }
+})();
 
 // 씬 루트 (URDF Z-up → Three.js Y-up)
 const sceneRoot = new THREE.Group();
