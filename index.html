@@ -2050,9 +2050,18 @@ function renderModList(side) {
       if (side === 'L') selectedLModule = id;
       else              selectedRModule = id;
       lastFocusedSide = side;
-      // 즉시 해당 팔 적용
-      Object.assign(q, mod.angles);
+
+      // ── 중립 자세(P-001) 기준으로 선택된 모듈만 적용 ──
+      // animate() 루프가 q를 매 프레임 덮어쓰므로, q에 의존하지 않고
+      // 항상 neutral + 선택된 모듈 각도로 q를 완전히 재구성한다.
+      const _neutral = POSE_DB['P-001'] || {};
+      Object.assign(q, _neutral);
+      const _lM = selectedLModule ? ARM_MODULE_DB.left[selectedLModule]  : null;
+      const _rM = selectedRModule ? ARM_MODULE_DB.right[selectedRModule] : null;
+      if (_lM) Object.assign(q, _lM.angles);
+      if (_rM) Object.assign(q, _rM.angles);
       updateFK(q);
+
       document.getElementById('cur-pose-id').textContent =
         (selectedLModule || '?') + '+' + (selectedRModule || '?');
       setStatus(`${side === 'L' ? '왼팔' : '오른팔'} 모듈 ${id} 적용됨`);
@@ -2156,11 +2165,27 @@ window.saveComposite = function() {
     return;
   }
 
+  // animate() 루프가 q를 매 프레임 덮어쓰기 때문에 q에서 직접 읽으면
+  // 선택하지 않은 팔에 애니메이션 중간값이 섞일 수 있다.
+  // → 선택된 모듈 DB 값을 우선 사용하고, 미선택 팔은 P-001 중립값으로 대체한다.
+  const _saveLM = selectedLModule ? ARM_MODULE_DB.left[selectedLModule]  : null;
+  const _saveRM = selectedRModule ? ARM_MODULE_DB.right[selectedRModule] : null;
+  const _saveNeutral = POSE_DB['P-001'] || {};
   const curAngles = {
-    L1:q.L1||0, L2:q.L2||0, L3:q.L3||0, L4:q.L4||0,
-    L5:q.L5||0, L6:q.L6||0, L7:q.L7||0,
-    R1:q.R1||0, R2:q.R2||0, R3:q.R3||0, R4:q.R4||0,
-    R5:q.R5||0, R6:q.R6||0, R7:q.R7||0,
+    L1: _saveLM ? (_saveLM.angles.L1||0) : (_saveNeutral.L1||0),
+    L2: _saveLM ? (_saveLM.angles.L2||0) : (_saveNeutral.L2||0),
+    L3: _saveLM ? (_saveLM.angles.L3||0) : (_saveNeutral.L3||0),
+    L4: _saveLM ? (_saveLM.angles.L4||0) : (_saveNeutral.L4||0),
+    L5: _saveLM ? (_saveLM.angles.L5||0) : (_saveNeutral.L5||0),
+    L6: _saveLM ? (_saveLM.angles.L6||0) : (_saveNeutral.L6||0),
+    L7: _saveLM ? (_saveLM.angles.L7||0) : (_saveNeutral.L7||0),
+    R1: _saveRM ? (_saveRM.angles.R1||0) : (_saveNeutral.R1||0),
+    R2: _saveRM ? (_saveRM.angles.R2||0) : (_saveNeutral.R2||0),
+    R3: _saveRM ? (_saveRM.angles.R3||0) : (_saveNeutral.R3||0),
+    R4: _saveRM ? (_saveRM.angles.R4||0) : (_saveNeutral.R4||0),
+    R5: _saveRM ? (_saveRM.angles.R5||0) : (_saveNeutral.R5||0),
+    R6: _saveRM ? (_saveRM.angles.R6||0) : (_saveNeutral.R6||0),
+    R7: _saveRM ? (_saveRM.angles.R7||0) : (_saveNeutral.R7||0),
   };
 
   if (editingNPoseId) {
